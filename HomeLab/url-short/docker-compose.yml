@@ -1,0 +1,16 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: url-short
+      APP_PORT: 5656
+
+  url-short:
+    image: homelab/url-short:latest
+    build: ./app
+    user: "0:0"
+    restart: on-failure
+    stop_grace_period: 1m
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
