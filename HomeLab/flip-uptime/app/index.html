@@ -3,153 +3,106 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flip Uptime</title>
+<title>Clock & Uptime</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
   body {
     background: #0f1115;
-    color: #eee;
-    font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 48px;
+    gap: 60px;
   }
 
-  .title {
-    font-size: 13px;
+  .label {
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: 3px;
     text-transform: uppercase;
     color: #6c727f;
+    text-align: center;
+    margin-bottom: 20px;
   }
 
-  /* FLIP CLOCK */
+  /* ===== CLOCK ===== */
   .clock {
     display: flex;
     align-items: center;
     gap: 12px;
   }
 
-  .flip-group {
+  .group {
     display: flex;
-    gap: 4px;
+    gap: 8px;
   }
 
-  .flip-sep {
+  .separator {
     font-size: 56px;
-    font-weight: 700;
+    font-weight: 800;
     color: #3D6BFF;
-    line-height: 80px;
-    margin: 0 2px;
+    line-height: 1;
     align-self: center;
-    margin-bottom: 8px;
+    margin: 0 4px;
   }
 
   .flip-card {
-    width: 64px;
-    height: 80px;
-    position: relative;
-    perspective: 300px;
-  }
-
-  .flip-card-inner {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-  }
-
-  /* Static halves */
-  .top-half, .bottom-half {
-    width: 100%;
-    height: 50%;
+    width: 85px;
+    height: 120px;
     background: #1a1d24;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    overflow: hidden;
+    border-radius: 12px;
     position: relative;
-  }
-  .top-half {
-    border-radius: 8px 8px 0 0;
-    border-bottom: 1px solid #0f1115;
-    align-items: flex-end;
-  }
-  .bottom-half {
-    border-radius: 0 0 8px 8px;
-    align-items: flex-start;
-  }
-
-  .top-half span, .bottom-half span {
-    font-size: 56px;
-    font-weight: 700;
-    color: #fff;
-    line-height: 80px;
-    position: absolute;
-  }
-  .top-half span { bottom: 0; }
-  .bottom-half span { top: -40px; }
-
-  /* Flip animation */
-  .flip-top, .flip-bottom {
-    position: absolute;
-    width: 100%;
-    height: 50%;
-    background: #1a1d24;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
     overflow: hidden;
-    backface-visibility: hidden;
-    transform-origin: bottom center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .flip-top {
-    top: 0;
-    border-radius: 8px 8px 0 0;
-    transform-origin: bottom center;
-  }
-  .flip-bottom {
+
+  /* Линия посередине */
+  .flip-card::after {
+    content: '';
+    position: absolute;
+    left: 0;
     top: 50%;
-    border-radius: 0 0 8px 8px;
-    transform-origin: top center;
-    align-items: flex-start;
+    width: 100%;
+    height: 2px;
+    background: #0f1115;
+    z-index: 5;
   }
 
-  .flip-top span, .flip-bottom span {
-    font-size: 56px;
-    font-weight: 700;
-    color: #fff;
-    line-height: 80px;
+  /* Верхняя затемненная часть */
+  .shade {
     position: absolute;
-  }
-  .flip-top span { bottom: 0; }
-  .flip-bottom span { top: -40px; }
-
-  .flip-top { animation: none; }
-  .flip-bottom { animation: none; transform: rotateX(90deg); }
-
-  .flipping .flip-top {
-    animation: flipTop 0.3s ease-in forwards;
-  }
-  .flipping .flip-bottom {
-    animation: flipBottom 0.3s ease-out 0.3s forwards;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    background: rgba(0, 0, 0, 0.1);
+    z-index: 3;
+    pointer-events: none;
+    border-radius: 12px 12px 0 0;
   }
 
-  @keyframes flipTop {
-    0%   { transform: rotateX(0deg); }
-    100% { transform: rotateX(-90deg); }
-  }
-  @keyframes flipBottom {
-    0%   { transform: rotateX(90deg); }
-    100% { transform: rotateX(0deg); }
+  /* Основная цифра */
+  .digit {
+    font-size: 78px;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+    z-index: 2;
+    user-select: none;
   }
 
-  /* UPTIME */
-  .uptime-block {
+  /* ===== UPTIME ===== */
+  .uptime {
     display: flex;
     gap: 16px;
   }
@@ -157,162 +110,154 @@
   .uptime-item {
     background: #1a1d24;
     border-radius: 12px;
-    padding: 16px 24px;
+    padding: 18px 24px;
     text-align: center;
-    min-width: 90px;
+    min-width: 85px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 
-  .uptime-val {
-    font-size: 28px;
+  .uptime-value {
+    font-size: 32px;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(90deg, #3D6BFF, #B43DFF);
+    background: linear-gradient(135deg, #3D6BFF, #B43DFF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
-  .uptime-lbl {
-    font-size: 11px;
+  .uptime-label {
+    font-size: 10px;
     color: #6c727f;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-top: 4px;
-  }
-
-  .uptime-title {
-    font-size: 13px;
-    color: #6c727f;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    text-align: center;
-    margin-bottom: 12px;
+    letter-spacing: 1px;
+    margin-top: 6px;
   }
 </style>
 </head>
 <body>
 
-<div class="title">Текущее время</div>
+  <!-- ===== CLOCK ===== -->
+  <div>
+    <div class="label">Текущее время</div>
+    <div class="clock">
+      <!-- Часы -->
+      <div class="group">
+        <div class="flip-card" id="h1">
+          <div class="shade"></div>
+          <div class="digit">0</div>
+        </div>
+        <div class="flip-card" id="h2">
+          <div class="shade"></div>
+          <div class="digit">0</div>
+        </div>
+      </div>
 
-<div class="clock" id="clock">
-  <!-- HH -->
-  <div class="flip-group">
-    <div class="flip-card" id="h1"></div>
-    <div class="flip-card" id="h2"></div>
-  </div>
-  <div class="flip-sep">:</div>
-  <!-- MM -->
-  <div class="flip-group">
-    <div class="flip-card" id="m1"></div>
-    <div class="flip-card" id="m2"></div>
-  </div>
-  <div class="flip-sep">:</div>
-  <!-- SS -->
-  <div class="flip-group">
-    <div class="flip-card" id="s1"></div>
-    <div class="flip-card" id="s2"></div>
-  </div>
-</div>
+      <div class="separator">:</div>
 
-<div>
-  <div class="uptime-title">Аптайм приложения</div>
-  <div class="uptime-block">
-    <div class="uptime-item">
-      <div class="uptime-val" id="ud">0</div>
-      <div class="uptime-lbl">Дней</div>
+      <!-- Минуты -->
+      <div class="group">
+        <div class="flip-card" id="m1">
+          <div class="shade"></div>
+          <div class="digit">0</div>
+        </div>
+        <div class="flip-card" id="m2">
+          <div class="shade"></div>
+          <div class="digit">0</div>
+        </div>
+      </div>
+
+      <div class="separator">:</div>
+
+      <!-- Секунды -->
+      <div class="group">
+        <div class="flip-card" id="s1">
+          <div class="shade"></div>
+          <div class="digit">0</div>
+        </div>
+        <div class="flip-card" id="s2">
+          <div class="shade"></div>
+          <div class="digit">0</div>
+        </div>
+      </div>
     </div>
-    <div class="uptime-item">
-      <div class="uptime-val" id="uh">00</div>
-      <div class="uptime-lbl">Часов</div>
-    </div>
-    <div class="uptime-item">
-      <div class="uptime-val" id="um">00</div>
-      <div class="uptime-lbl">Минут</div>
-    </div>
-    <div class="uptime-item">
-      <div class="uptime-val" id="us">00</div>
-      <div class="uptime-lbl">Секунд</div>
+  </div>
+
+  <!-- ===== UPTIME ===== -->
+  <div>
+    <div class="label">Аптайм приложения</div>
+    <div class="uptime">
+      <div class="uptime-item">
+        <div class="uptime-value" id="days">0</div>
+        <div class="uptime-label">Дней</div>
+      </div>
+      <div class="uptime-item">
+        <div class="uptime-value" id="hours">00</div>
+        <div class="uptime-label">Часов</div>
+      </div>
+      <div class="uptime-item">
+        <div class="uptime-value" id="minutes">00</div>
+        <div class="uptime-label">Минут</div>
+      </div>
+      <div class="uptime-item">
+        <div class="uptime-value" id="seconds">00</div>
+        <div class="uptime-label">Секунд</div>
+      </div>
     </div>
   </div>
-</div>
 
-<script>
-const START = Date.now();
-const cards = {};
-const current = {};
-
-function pad(n) { return String(n).padStart(2, '0'); }
-
-function buildCard(el, digit) {
-  el.innerHTML = `
-    <div class="top-half"><span>${digit}</span></div>
-    <div class="bottom-half"><span>${digit}</span></div>
-    <div class="flip-top"><span>${digit}</span></div>
-    <div class="flip-bottom"><span>${digit}</span></div>
-  `;
-}
-
-function flipCard(el, from, to) {
-  const flipTop = el.querySelector('.flip-top span');
-  const flipBot = el.querySelector('.flip-bottom span');
-  const topHalf = el.querySelector('.top-half span');
-  const botHalf = el.querySelector('.bottom-half span');
-
-  flipTop.textContent = from;
-  flipBot.textContent = to;
-
-  el.classList.remove('flipping');
-  void el.offsetWidth;
-  el.classList.add('flipping');
-
-  setTimeout(() => {
-    topHalf.textContent = to;
-    botHalf.textContent = to;
-    el.classList.remove('flipping');
-  }, 650);
-}
-
-const ids = ['h1','h2','m1','m2','s1','s2'];
-ids.forEach(id => {
-  cards[id] = document.getElementById(id);
-  current[id] = null;
-  buildCard(cards[id], '0');
-});
-
-function updateClock() {
-  const now = new Date();
-  const time = pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
-  const digits = time.split('');
-  ids.forEach((id, i) => {
-    const d = digits[i];
-    if (current[id] !== d) {
-      if (current[id] !== null) {
-        flipCard(cards[id], current[id], d);
-      } else {
-        buildCard(cards[id], d);
-      }
-      current[id] = d;
+  <script>
+    // ============================================
+    // 1. CLOCK
+    // ============================================
+    function pad(num) {
+      return String(num).padStart(2, '0');
     }
-  });
-}
 
-function updateUptime() {
-  const sec = Math.floor((Date.now() - START) / 1000);
-  const d = Math.floor(sec / 86400);
-  const h = Math.floor((sec % 86400) / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  document.getElementById('ud').textContent = d;
-  document.getElementById('uh').textContent = pad(h);
-  document.getElementById('um').textContent = pad(m);
-  document.getElementById('us').textContent = pad(s);
-}
+    function updateClock() {
+      const now = new Date();
+      const hours = pad(now.getHours());
+      const minutes = pad(now.getMinutes());
+      const seconds = pad(now.getSeconds());
 
-updateClock();
-updateUptime();
-setInterval(updateClock, 1000);
-setInterval(updateUptime, 1000);
-</script>
+      document.getElementById('h1').querySelector('.digit').textContent = hours[0];
+      document.getElementById('h2').querySelector('.digit').textContent = hours[1];
+      document.getElementById('m1').querySelector('.digit').textContent = minutes[0];
+      document.getElementById('m2').querySelector('.digit').textContent = minutes[1];
+      document.getElementById('s1').querySelector('.digit').textContent = seconds[0];
+      document.getElementById('s2').querySelector('.digit').textContent = seconds[1];
+    }
+
+    // ============================================
+    // 2. UPTIME
+    // ============================================
+    const startTime = Date.now();
+
+    function updateUptime() {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+
+      const days = Math.floor(elapsed / 86400);
+      const hours = Math.floor((elapsed % 86400) / 3600);
+      const minutes = Math.floor((elapsed % 3600) / 60);
+      const seconds = elapsed % 60;
+
+      document.getElementById('days').textContent = days;
+      document.getElementById('hours').textContent = pad(hours);
+      document.getElementById('minutes').textContent = pad(minutes);
+      document.getElementById('seconds').textContent = pad(seconds);
+    }
+
+    // ============================================
+    // 3. ЗАПУСК
+    // ============================================
+    updateClock();
+    updateUptime();
+
+    setInterval(() => {
+      updateClock();
+      updateUptime();
+    }, 1000);
+  </script>
+
 </body>
 </html>
