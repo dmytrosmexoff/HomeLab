@@ -1,5 +1,5 @@
 manifestVersion: 1
-id: flip-uptime
+id: homelab-flip-uptime
 icon: ./icon.png
 category: utilities
 name: "Flip Uptime"
