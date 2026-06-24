@@ -4,14 +4,10 @@ services:
   app_proxy:
     environment:
       APP_HOST: flip-uptime
-      APP_PORT: 3442
+      APP_PORT: 6565
 
   flip-uptime:
-    image: nginx:alpine
+    image: dmytrosmexoff/flip-uptime:latest
     user: "0:0"
     restart: on-failure
     stop_grace_period: 1m
-    volumes:
-      - ${APP_DATA_DIR}/app:/usr/share/nginx/html:ro
-    ports:
-      - "3442:80"
