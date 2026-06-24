@@ -18,7 +18,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./HomeLab/tt-dloader
+          context: ./tt-dloader
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tt-dloader:latest
           platforms: linux/amd64,linux/arm64
@@ -35,7 +35,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./HomeLab/url-short/app
+          context: ./url-short/app
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/url-short:latest
           platforms: linux/amd64,linux/arm64
