@@ -4,7 +4,7 @@ services:
   app_proxy:
     environment:
       APP_HOST: flip-uptime
-      APP_PORT: 6565
+      APP_PORT: 3442
 
   flip-uptime:
     image: dmytrosmexoff/flip-uptime:latest
