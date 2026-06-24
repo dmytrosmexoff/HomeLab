@@ -1,0 +1,28 @@
+manifestVersion: 1
+id: homelab-flip-uptime
+icon: ./icon.png
+category: utilities
+name: "Flip Uptime"
+version: "1.0.0"
+tagline: Красивые флип-часы с аптаймом системы
+description: >-
+  Flip Uptime — минималистичная веб-страница с анимированными флип-часами в стиле Mac.
+
+  🕐 Показывает текущее время в виде перелистывающихся цифр.
+  📊 Отображает аптайм приложения с момента запуска.
+
+  Никаких настроек — просто открой и смотри.
+
+releaseNotes: "Первый релиз"
+developer: "hlab"
+website: ""
+dependencies: []
+repo: ""
+support: ""
+port: 3442
+gallery: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: ""
+submission: ""
