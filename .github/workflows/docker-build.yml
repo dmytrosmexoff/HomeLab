@@ -18,7 +18,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./tt-dloader
+          context: ./homelab-tt-dloader
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/tt-dloader:latest
           platforms: linux/amd64,linux/arm64
@@ -35,7 +35,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./url-short/app
+          context: ./homelab-url-short/app
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/url-short:latest
           platforms: linux/amd64,linux/arm64
@@ -52,7 +52,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./flip-uptime/app
+          context: ./homelab-flip-uptime/app
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/flip-uptime:latest
           platforms: linux/amd64,linux/arm64
