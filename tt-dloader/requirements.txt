@@ -1,3 +1,0 @@
-aiogram>=3.4,<4
-yt-dlp>=2024.12.13
-aiohttp>=3.9
