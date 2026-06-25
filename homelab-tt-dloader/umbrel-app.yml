@@ -1,0 +1,32 @@
+manifestVersion: 1
+id: homelab-tt-dloader
+icon: ""
+category: media
+name: "TT DLoader"
+version: "0.0.1"
+tagline: Telegram-бот для скачивания видео по ссылке (TikTok и др.)
+description: >-
+  TT DLoader — многофункциональный Telegram-бот для скачивания видео/аудио с 12+ популярных платформ, а также полноценная веб-панель для управления статистикой, рассылками, пользователями и медиатекой.
+
+  🔥 Фишки: анимированный прогресс скачивания, отложенные рассылки с медиа, автоматический перевод сообщений на язык пользователя, топ-10 языков пользователей, экспорт CSV.
+
+  📦 Возможности
+  Скачивание с 12+ платформ: YouTube, TikTok, Instagram, Twitter/X, Facebook, Reddit, Vimeo, Twitch, SoundCloud, Rutube, Dailymotion и другие (через yt-dlp).
+  Выбор качества: Best (лучшее), Medium (480p), Audio (MP3).
+  Медиатека: просмотр и прослушивание скачанных файлов прямо в браузере, избранное для пользователей и файлов.
+
+  ⚙️ Все настройки (Telegram Bot Token, Admin ID и др.) выполняются через веб-интерфейс после установки.
+
+releaseNotes: "Первый релиз"
+developer: "dmytrosmexoff"
+website: "https://github.com/dmytrosmexoff/TTDownloader"
+dependencies: []
+repo: "https://github.com/dmytrosmexoff/TTDownloader"
+support: "https://github.com/dmytrosmexoff/TTDownloader/issues"
+port: 8081
+gallery: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: ""
+submission: ""
