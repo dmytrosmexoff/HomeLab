@@ -23,7 +23,7 @@ website: "https://github.com/dmytrosmexoff/TTDownloader"
 dependencies: []
 repo: "https://github.com/dmytrosmexoff/TTDownloader"
 support: "https://github.com/dmytrosmexoff/TTDownloader/issues"
-port: 8081
+port: 7080
 gallery: []
 path: ""
 defaultUsername: ""
