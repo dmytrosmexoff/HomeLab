@@ -13,6 +13,6 @@ COPY bot.py languages.json ./
 
 RUN mkdir -p /data/downloads /data/config /data/media_temp
 
-EXPOSE 7070
+EXPOSE 8081
 
 CMD ["python", "bot.py"]
