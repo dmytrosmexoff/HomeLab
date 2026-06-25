@@ -983,7 +983,7 @@ async def start_web_server():
     app.router.add_post('/settings', settings_post)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 7080)
+    site = web.TCPSite(runner, '0.0.0.0', 8090)
     await site.start()
 
 async def bot_task():
