@@ -1,0 +1,14 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: flip-uptime_app_1
+      APP_PORT: 80
+
+  app:
+    build: ./app
+    image: homelab/flip-uptime:latest
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: 1m
