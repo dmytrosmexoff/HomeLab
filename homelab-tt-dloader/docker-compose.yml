@@ -4,7 +4,7 @@ services:
   app_proxy:
     environment:
       APP_HOST: homelab-tt-dloader_app_1
-      APP_PORT: 7080
+      APP_PORT: 8081
       
   app:
     image: dmytrosmexoff/tiktok-bot:latest
