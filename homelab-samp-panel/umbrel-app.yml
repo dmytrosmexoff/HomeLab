@@ -1,0 +1,33 @@
+manifestVersion: 1
+id: homelab-samp-panel
+icon: ""
+category: utilities
+name: "SAMP Panel"
+version: "1.0.0"
+tagline: Веб-панель управления SA-MP сервером
+description: >-
+  SAMP Panel — полноценная веб-панель для запуска и мониторинга SA-MP (San Andreas Multiplayer) сервера прямо с Umbrel.
+
+  🎮 Возможности
+  — Запуск / остановка / рестарт сервера одной кнопкой
+  — Поддержка Linux-бинарника (samp03svr) и Windows-версии через Wine
+  — Загрузка папки сервера через веб-интерфейс или монтирование volume с хоста
+  — Редактирование server.cfg прямо в браузере
+  — Список онлайн-игроков с никами в реальном времени
+  — График онлайна за последние 7 дней
+  — Время непрерывной работы сервера (uptime)
+  — История сессий и пиковый онлайн
+
+releaseNotes: "Первый релиз"
+developer: "hlab"
+website: ""
+dependencies: []
+repo: ""
+support: ""
+port: 5750
+gallery: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: ""
+submission: ""
