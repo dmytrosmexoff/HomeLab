@@ -10,9 +10,6 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         dpkg --add-architecture i386 && \
         apt-get update && \
         apt-get install -y --no-install-recommends \
-            wine \
-            wine32 \
-            lib32gcc-s1 \
             procps; \
     else \
         # Для arm64 (ставим только то, что доступно)
