@@ -72,5 +72,5 @@ jobs:
           context: ./homelab-samp-panel/app
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/samp-panel:latest
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           no-cache: true
