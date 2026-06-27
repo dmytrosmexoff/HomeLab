@@ -28,3 +28,7 @@ services:
       PMA_HOST: db
       PMA_PORT: 3306
       MYSQL_ROOT_PASSWORD: rootpassword
+      PMA_ABSOLUTE_URI: /
+      UPLOAD_LIMIT: 300M
+    volumes:
+      - ${APP_DATA_DIR}/data/sessions:/sessions
