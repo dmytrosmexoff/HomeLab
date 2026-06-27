@@ -11,21 +11,27 @@ services:
     restart: on-failure
     stop_grace_period: 1m
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme_root}
       MYSQL_DATABASE: homelab
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: admin
+      MYSQL_USER: ${MYSQL_USER:-admin}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme_admin}
     volumes:
       - ${APP_DATA_DIR}/data/mysql:/var/lib/mysql
-    ports:
-      - "3306:3306"
+    networks:
+      - default
 
   phpmyadmin:
-    image: phpmyadmin:latest
+    image: phpmyadmin:5.2
     restart: on-failure
     stop_grace_period: 1m
     environment:
       PMA_HOST: homelab-mysql-db-1
       PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme_root}
       UPLOAD_LIMIT: 300M
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge

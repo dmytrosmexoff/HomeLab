@@ -42,7 +42,8 @@ def read_conf():
     try:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
-    except:
+    except Exception as e:
+        log(f"read_conf error: {e}")
         return {}
 
 def write_conf(data):
@@ -102,10 +103,14 @@ def stop_server():
         if not server_running():
             return False, "Сервер не запущен"
         _proc.terminate()
+        killed = False
         try:
             _proc.wait(timeout=10)
         except subprocess.TimeoutExpired:
             _proc.kill()
+            _proc.wait()
+            killed = True
+        if not killed and _proc.returncode not in (0, -15):
             stats = load_stats()
             stats["crashes"] = stats.get("crashes", 0) + 1
             save_stats(stats)
@@ -205,7 +210,11 @@ def api_config_get():
 @app.route("/api/config",  methods=["POST"])
 def api_config_set():
     data = request.get_json() or {}
-    write_conf(data.get("config", {}))
+    config = data.get("config", {})
+    if not isinstance(config, dict):
+        return jsonify({"ok": False, "msg": "Неверный формат конфига"}), 400
+    write_conf(config)
+    log("Config updated")
     return jsonify({"ok": True})
 
 @app.route("/api/chart/week")
@@ -259,14 +268,25 @@ def api_upload():
     f = request.files.get("file")
     if not f:
         return jsonify({"ok": False, "msg": "Файл не выбран"})
-    fname = f.filename or ""
+    fname = os.path.basename(f.filename or "")
+    if not fname:
+        return jsonify({"ok": False, "msg": "Некорректное имя файла"}), 400
     os.makedirs(SERVER_DIR, exist_ok=True)
     if fname.endswith(".zip"):
         tmp = "/tmp/ragemp_upload.zip"
         f.save(tmp)
-        with zipfile.ZipFile(tmp) as z:
-            z.extractall(SERVER_DIR)
-        os.remove(tmp)
+        try:
+            with zipfile.ZipFile(tmp) as z:
+                # Защита от zip slip
+                for member in z.namelist():
+                    dest_path = os.path.realpath(os.path.join(SERVER_DIR, member))
+                    if not dest_path.startswith(os.path.realpath(SERVER_DIR)):
+                        log(f"Zip slip blocked: {member}")
+                        return jsonify({"ok": False, "msg": "Небезопасный архив"}), 400
+                z.extractall(SERVER_DIR)
+        finally:
+            if os.path.exists(tmp):
+                os.remove(tmp)
         return jsonify({"ok": True, "msg": "Архив распакован в /server"})
     dest = os.path.join(SERVER_DIR, fname)
     f.save(dest)
