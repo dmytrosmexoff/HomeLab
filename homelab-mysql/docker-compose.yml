@@ -1,9 +1,9 @@
 version: "3.7"
 
 services:
-  app_proxy:
+    app_proxy:
     environment:
-      APP_HOST: homelab-mysql_phpmyadmin_1
+      APP_HOST: homelab-mysql-phpmyadmin-1
       APP_PORT: 80
 
   db:
