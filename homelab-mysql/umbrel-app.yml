@@ -1,0 +1,28 @@
+manifestVersion: 1
+id: homelab-mysql
+icon: ""
+category: utilities
+name: "MySQL + phpMyAdmin"
+version: "1.0.0"
+tagline: База данных MySQL с веб-интерфейсом phpMyAdmin
+description: >-
+  MySQL + phpMyAdmin — готовая связка для работы с базами данных прямо на Umbrel.
+
+  🗄️ MySQL 8.0 — надёжная реляционная база данных.
+  🌐 phpMyAdmin — удобный веб-интерфейс для управления БД, таблицами, пользователями и запросами.
+
+  Данные хранятся в постоянном volume и не теряются при перезапуске.
+
+releaseNotes: "Первый релиз"
+developer: "hlab"
+website: ""
+dependencies: []
+repo: ""
+support: ""
+port: 5760
+gallery: []
+path: ""
+defaultUsername: "admin"
+defaultPassword: "admin"
+submitter: ""
+submission: ""

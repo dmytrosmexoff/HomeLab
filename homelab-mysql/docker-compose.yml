@@ -1,0 +1,30 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: homelab-mysql_phpmyadmin_1
+      APP_PORT: 80
+
+  db:
+    image: mysql:8.0
+    restart: on-failure
+    stop_grace_period: 1m
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: homelab
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+    volumes:
+      - ${APP_DATA_DIR}/data/mysql:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: on-failure
+    stop_grace_period: 1m
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: rootpassword
