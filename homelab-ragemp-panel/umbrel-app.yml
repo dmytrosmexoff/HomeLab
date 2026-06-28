@@ -23,7 +23,7 @@ website: ""
 dependencies: []
 repo: ""
 support: ""
-port: 5656
+port: 5680
 gallery: []
 path: ""
 defaultUsername: ""

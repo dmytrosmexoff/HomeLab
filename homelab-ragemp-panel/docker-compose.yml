@@ -4,7 +4,7 @@ services:
   app_proxy:
     environment:
       APP_HOST: homelab-ragemp-panel_app_1
-      APP_PORT: 5656
+      APP_PORT: 5680
 
   app:
     image: dmytrosmexoff/ragemp-panel:latest
@@ -12,7 +12,7 @@ services:
     stop_grace_period: 1m
     ports:
       - "22005:22005/udp"
-      - "22006:22006/tcp"
+      - "22007:22007/tcp"
     volumes:
       - ${APP_DATA_DIR}/data:/data
       - ${APP_DATA_DIR}/server:/server
