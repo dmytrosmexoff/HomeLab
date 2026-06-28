@@ -1,0 +1,28 @@
+manifestVersion: 1
+id: homelab-mysql
+icon: ""
+category: utilities
+name: "MySQL + phpMyAdmin"
+version: "2.0.0"
+tagline: База данных MySQL 8 с веб-интерфейсом phpMyAdmin
+description: >-
+  MySQL 8.0 + phpMyAdmin — надёжная связка для работы с базами данных на Umbrel.
+
+  🗄️ MySQL 8.0 с auth_socket отключён (совместимость с игровыми серверами)
+  🌐 phpMyAdmin — веб-интерфейс для управления БД, таблицами и пользователями
+  💾 Данные хранятся в постоянном volume и не теряются при перезапуске
+  🎮 Готов к подключению Minecraft, SAMP и RageMP серверов
+
+releaseNotes: "Полностью переписан v2 — исправлены проблемы с авторизацией"
+developer: "hlab"
+website: ""
+dependencies: []
+repo: ""
+support: ""
+port: 5760
+gallery: []
+path: ""
+defaultUsername: "admin"
+defaultPassword: "adminpass"
+submitter: ""
+submission: ""

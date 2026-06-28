@@ -1,0 +1,27 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: homelab-ragemp-panel_app_1
+      APP_PORT: 5656
+
+  app:
+    build: ./app
+    restart: on-failure
+    stop_grace_period: 1m
+    ports:
+      - "22005:22005/udp"
+      - "22006:22006/tcp"
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+      - ${APP_DATA_DIR}/server:/server
+    environment:
+      - SERVER_DIR=/server
+      - DATA_DIR=/data
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge
