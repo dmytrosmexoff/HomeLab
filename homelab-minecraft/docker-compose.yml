@@ -2,27 +2,20 @@ version: "3.7"
 
 services:
   app_proxy:
+    image: getumbrel/app-proxy:1.7.0
     environment:
       APP_HOST: homelab-minecraft_app_1
-      APP_PORT: 5770
+      APP_PORT: 5656
+    ports:
+      - "5770:5770"
+    restart: on-failure
 
   app:
-    image: dmytrosmexoff/ragemp-panel:latest
+    image: dmytrosmexoff/minecraft-panel:latest
+    user: "0:0"
     restart: on-failure
     stop_grace_period: 1m
     ports:
       - "25565:25565/tcp"
       - "25565:25565/udp"
-    volumes:
-      - ${APP_DATA_DIR}/data:/data
-      - ${APP_DATA_DIR}/server:/server
-    environment:
-      - SERVER_DIR=/server
-      - DATA_DIR=/data
-      - RCON_PASSWORD=${RCON_PASSWORD:-mcrcon123}
-      - RCON_PORT=25575
-      - JAVA_OPTS=${JAVA_OPTS:--Xmx2G -Xms512M}
-
-networks:
-  default:
-    driver: bridge
+      - "5771:5656" # Веб-панель будет доступна на порту 5771
