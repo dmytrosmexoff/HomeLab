@@ -7,7 +7,7 @@ services:
       APP_PORT: 5770
 
   app:
-    image: ${DOCKERHUB_USERNAME}/minecraft-panel:latest
+    image: dmytrosmexoff/ragemp-panel:latest
     restart: on-failure
     stop_grace_period: 1m
     ports:
