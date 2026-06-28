@@ -7,7 +7,7 @@ services:
       APP_HOST: homelab-minecraft_app_1
       APP_PORT: 5656
     ports:
-      - "5770:5770"
+      - "5772:5770"
     restart: on-failure
 
   app:
@@ -18,4 +18,4 @@ services:
     ports:
       - "25565:25565/tcp"
       - "25565:25565/udp"
-      - "5771:5656" # Веб-панель будет доступна на порту 5771
+      - "5770:5656"
