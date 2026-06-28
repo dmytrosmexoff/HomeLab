@@ -7,7 +7,7 @@ services:
       APP_PORT: 5750
 
   app:
-    build: ./app
+    image: ${DOCKERHUB_USERNAME}/samp-panel:latest
     restart: on-failure
     stop_grace_period: 1m
     ports:

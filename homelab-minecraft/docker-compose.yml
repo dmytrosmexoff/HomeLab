@@ -7,7 +7,7 @@ services:
       APP_PORT: 5770
 
   app:
-    build: ./app
+    image: ${DOCKERHUB_USERNAME}/minecraft-panel:latest
     restart: on-failure
     stop_grace_period: 1m
     ports:
@@ -22,3 +22,7 @@ services:
       - RCON_PASSWORD=${RCON_PASSWORD:-mcrcon123}
       - RCON_PORT=25575
       - JAVA_OPTS=${JAVA_OPTS:--Xmx2G -Xms512M}
+
+networks:
+  default:
+    driver: bridge
