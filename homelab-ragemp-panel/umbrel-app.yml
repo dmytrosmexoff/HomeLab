@@ -1,6 +1,6 @@
 manifestVersion: 1
 id: homelab-ragemp-panel
-icon: ""
+icon: icon.png
 category: utilities
 name: "RAGE-MP Panel"
 version: "2.0.0"

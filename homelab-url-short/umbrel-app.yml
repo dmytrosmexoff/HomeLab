@@ -1,6 +1,6 @@
 manifestVersion: 1
 id: homelab-url-short
-icon: ""
+icon: icon.png
 category: utilities
 name: "URL Short"
 version: "1.0.0"

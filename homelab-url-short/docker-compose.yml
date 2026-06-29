@@ -2,9 +2,13 @@ version: "3.7"
 
 services:
   app_proxy:
+    image: getumbrel/app-proxy:1.7.0
     environment:
       APP_HOST: homelab-url-short_app_1
       APP_PORT: 5690
+    ports:
+      - "5690:8080"
+    restart: on-failure
 
   app:
     image: dmytrosmexoff/url-short:latest

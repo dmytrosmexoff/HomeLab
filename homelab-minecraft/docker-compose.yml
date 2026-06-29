@@ -5,17 +5,25 @@ services:
     image: getumbrel/app-proxy:1.7.0
     environment:
       APP_HOST: homelab-minecraft_app_1
-      APP_PORT: 5656
+      APP_PORT: 5770
     ports:
-      - "5772:5770"
+      - "5770:8080"
     restart: on-failure
 
   app:
     image: dmytrosmexoff/minecraft-panel:latest
+    build: ./app
     user: "0:0"
     restart: on-failure
     stop_grace_period: 1m
+    volumes:
+      - "${APP_DATA_DIR}/data/server:/server"
+      - "${APP_DATA_DIR}/data/panel:/data"
     ports:
       - "25565:25565/tcp"
       - "25565:25565/udp"
-      - "5770:5656"
+    environment:
+      SERVER_DIR: /server
+      DATA_DIR: /data
+      RCON_PASSWORD: "${RCON_PASSWORD:-mcrcon123}"
+      JAVA_OPTS: "${JAVA_OPTS:--Xmx2G -Xms512M}"

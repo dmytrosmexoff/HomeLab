@@ -1,6 +1,6 @@
 manifestVersion: 1
 id: homelab-samp-panel
-icon: ""
+icon: icon.png
 category: utilities
 name: "SAMP Panel"
 version: "2.0.0"

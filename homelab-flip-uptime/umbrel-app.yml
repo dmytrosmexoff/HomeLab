@@ -1,6 +1,6 @@
 manifestVersion: 1
 id: homelab-flip-uptime
-icon: ""
+icon: icon.png
 category: utilities
 name: "Flip Uptime"
 version: "1.0.0"
@@ -18,7 +18,7 @@ website: ""
 dependencies: []
 repo: ""
 support: ""
-port: 3442
+port: 5760
 gallery: []
 path: ""
 defaultUsername: ""

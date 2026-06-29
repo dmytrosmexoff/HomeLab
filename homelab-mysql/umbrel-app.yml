@@ -1,6 +1,6 @@
 manifestVersion: 1
 id: homelab-mysql
-icon: ""
+icon: icon.png
 category: utilities
 name: "MySQL + phpMyAdmin"
 version: "2.0.0"
@@ -19,7 +19,7 @@ website: ""
 dependencies: []
 repo: ""
 support: ""
-port: 5761
+port: 8085
 gallery: []
 path: ""
 defaultUsername: "admin"

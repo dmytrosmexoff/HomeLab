@@ -1,6 +1,6 @@
 manifestVersion: 1
 id: homelab-minecraft
-icon: ""
+icon: icon.png
 category: utilities
 name: "Minecraft Panel"
 version: "1.0.0"

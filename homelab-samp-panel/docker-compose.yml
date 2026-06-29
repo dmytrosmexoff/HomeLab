@@ -5,16 +5,23 @@ services:
     image: getumbrel/app-proxy:1.7.0
     environment:
       APP_HOST: homelab-samp-panel_app_1
-      APP_PORT: 5656
+      APP_PORT: 5750
     ports:
-      - "5750:5750"
+      - "5750:8080"
     restart: on-failure
 
   app:
     image: dmytrosmexoff/samp-panel:latest
+    build: ./app
     user: "0:0"
     restart: on-failure
     stop_grace_period: 1m
+    volumes:
+      - "${APP_DATA_DIR}/data/server:/server"
+      - "${APP_DATA_DIR}/data/panel:/data"
     ports:
       - "7777:7777/udp"
-      - "5751:5656"
+    environment:
+      SERVER_DIR: /server
+      DATA_DIR: /data
+      RCON_PASSWORD: "${RCON_PASSWORD:-changeme}"
