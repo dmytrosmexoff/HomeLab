@@ -12,7 +12,6 @@ services:
 
   app:
     image: dmytrosmexoff/samp-panel:latest
-    build: ./app
     user: "0:0"
     restart: on-failure
     stop_grace_period: 1m
