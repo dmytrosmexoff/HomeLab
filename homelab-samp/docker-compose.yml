@@ -23,13 +23,32 @@ services:
       - ${APP_DATA_DIR}/data:/server/data
     networks:
       - default
-    # ---- ВСТАВЛЯЕМ ПЕРЕОПРЕДЕЛЕНИЕ КОМАНДЫ ----
+    # ---- АВТОМАТИЧЕСКАЯ ЗАГРУЗКА СЕРВЕРА ПРИ ПЕРВОМ ЗАПУСКЕ ----
     entrypoint: /bin/bash
     command:
       - -c
       - |
-        mkdir -p /server/data/servers/default
-        echo '{"name":"default"}' > /server/data/active.json
+        set -e
+        # Проверяем, есть ли уже сервер в папке default
+        if [ ! -f /server/data/servers/default/samp03svr ] && [ ! -f /server/data/servers/default/omp-server ]; then
+          echo "Скачиваю сервер open.mp..."
+          mkdir -p /server/data/servers/default
+          cd /server/data/servers/default
+          # Скачиваем последнюю стабильную версию open.mp
+          curl -L -o omp-server.tar.gz https://github.com/openmultiplayer/open.mp/releases/latest/download/omp-server-linux.tar.gz
+          tar -xzf omp-server.tar.gz
+          rm omp-server.tar.gz
+          chmod +x omp-server
+          echo "Сервер open.mp установлен."
+        else
+          echo "Сервер уже есть, пропускаю скачивание."
+        fi
+        # Создаём active.json, если его нет
+        if [ ! -f /server/data/active.json ]; then
+          echo '{"name":"default"}' > /server/data/active.json
+          echo "Файл active.json создан."
+        fi
+        # Запускаем оригинальный entrypoint.sh
         exec /entrypoint.sh
 
   web:
