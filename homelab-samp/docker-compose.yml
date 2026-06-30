@@ -23,15 +23,21 @@ services:
       - ${APP_DATA_DIR}/data:/server/data
     networks:
       - default
+    # ---- ВСТАВЛЯЕМ ПЕРЕОПРЕДЕЛЕНИЕ КОМАНДЫ ----
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        mkdir -p /server/data/servers/default
+        echo '{"name":"default"}' > /server/data/active.json
+        exec /entrypoint.sh
 
   web:
     image: dmytrosmexoff/samp-panel:latest
     container_name: homelab-samp_web_1
     restart: on-failure
-    # Сюда мы добавили порт, чтобы зайти напрямую в обход всего
     ports:
       - "3000:3000"
-    # МЫ УБРАЛИ SECTION DEPENDS_ON, чтобы разорвать замкнутый круг
     environment:
       SAMP_HOST: homelab-samp_game_1
       SAMP_PORT: "7777"
