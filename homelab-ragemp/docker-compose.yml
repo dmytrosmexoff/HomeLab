@@ -1,0 +1,45 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    image: getumbrel/app-proxy:1.7.0
+    environment:
+      APP_HOST: homelab-ragemp_web_1
+      APP_PORT: 3000
+    ports:
+      - "8093:8080"
+    restart: on-failure
+
+  # Запускает уже скачанные вами официальные файлы сервера (см. umbrel-app.yml /
+  # сообщение в логах при первом старте, если файлов ещё нет).
+  game:
+    build: ./game
+    container_name: homelab-ragemp_game_1
+    restart: on-failure
+    stop_grace_period: 30s
+    tty: true
+    stdin_open: true
+    ports:
+      - "22005:22005/udp"
+      - "22005:22005/tcp"
+    volumes:
+      - ${APP_DATA_DIR}/data/server:/server/data
+    networks:
+      - default
+
+  web:
+    build: ./web
+    container_name: homelab-ragemp_web_1
+    restart: on-failure
+    depends_on:
+      - game
+    environment:
+      DOCKER_CONTAINER_NAME: homelab-ragemp_game_1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge

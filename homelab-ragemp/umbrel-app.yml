@@ -1,0 +1,34 @@
+manifestVersion: 1
+id: homelab-ragemp
+icon: icon.png
+category: networking
+name: "RAGE:MP Server"
+version: "1.0.0"
+tagline: Запуск и управление настоящим RAGE:MP сервером (свои файлы сервера)
+description: >-
+  Контейнер для запуска официального Linux-сервера RAGE:MP.
+
+  ⚠️ Важно: файлы сервера RAGE:MP нельзя автоматически скачать в публичный Docker-образ —
+  их раздача требует принятия условий на официальном сайте rage.mp. Поэтому перед первым
+  запуском нужно один раз вручную скачать архив сервера на rage.mp/download и распаковать
+  его в папку с данными этого приложения (путь будет показан на странице приложения в Umbrel,
+  обычно .../app-data/homelab-ragemp/data/server/). После этого контейнер запустит настоящий
+  ./ragemp-server.
+
+  🔌 Старт / Стоп / Рестарт — реальное управление процессом через Docker Engine API.
+  📊 CPU, RAM и аптайм — реальные метрики контейнера.
+  🖥 Консоль — это настоящий live-вывод (docker logs) процесса сервера, команды отправляются
+     напрямую в STDIN процесса (как если бы вы вводили их в консоли сервера).
+releaseNotes: "Первый релиз: реальное управление + докер-метрики, без эмуляции данных"
+developer: "hlab"
+website: ""
+dependencies: []
+repo: ""
+support: ""
+port: 8093
+gallery: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: ""
+submission: ""

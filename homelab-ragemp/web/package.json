@@ -1,0 +1,10 @@
+{
+  "name": "homelab-ragemp-web",
+  "version": "1.0.0",
+  "private": true,
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.19.2",
+    "dockerode": "^4.0.2"
+  }
+}
