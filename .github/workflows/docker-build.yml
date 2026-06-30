@@ -16,7 +16,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./web
+          context: ./homelab-samp/web
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/samp-panel:latest
           platforms: linux/amd64,linux/arm64
@@ -38,7 +38,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./game
+          context: ./homelab-samp/game
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/samp-game:latest
           platforms: linux/amd64
