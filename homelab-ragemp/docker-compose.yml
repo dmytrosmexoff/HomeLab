@@ -10,10 +10,8 @@ services:
       - "8093:8080"
     restart: on-failure
 
-  # Запускает уже скачанные вами официальные файлы сервера (см. umbrel-app.yml /
-  # сообщение в логах при первом старте, если файлов ещё нет).
   game:
-    build: ./game
+    image: dmytrosmexoff/ragemp-game:latest
     container_name: homelab-ragemp_game_1
     restart: on-failure
     stop_grace_period: 30s
@@ -23,20 +21,23 @@ services:
       - "22005:22005/udp"
       - "22005:22005/tcp"
     volumes:
-      - ${APP_DATA_DIR}/data/server:/server/data
+      - ${APP_DATA_DIR}/data:/server/data
     networks:
       - default
 
   web:
-    build: ./web
+    image: dmytrosmexoff/ragemp-panel:latest
     container_name: homelab-ragemp_web_1
     restart: on-failure
     depends_on:
       - game
     environment:
       DOCKER_CONTAINER_NAME: homelab-ragemp_game_1
+      SERVERS_DIR: /data/servers
+      ACTIVE_FILE: /data/active.json
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${APP_DATA_DIR}/data:/data
     networks:
       - default
 

@@ -2,29 +2,41 @@
 set -e
 
 export RCON_PASSWORD="${RCON_PASSWORD:-changeme123}"
-export MAX_PLAYERS="${MAX_PLAYERS:-100}"
-export HOSTNAME_="${HOSTNAME_:-HomeLab SA-MP Server}"
-export GAMEMODE="${GAMEMODE:-rivershell}"
-export GAMEMODE_TEXT="${GAMEMODE_TEXT:-HomeLab RP}"
-export ANNOUNCE="${ANNOUNCE:-0}"
-export WEBURL="${WEBURL:-}"
+ACTIVE_FILE="/server/data/active.json"
+SERVERS_DIR="/server/data/servers"
+RUN_DIR="/server/run"
 
-mkdir -p /server/data
-cd /server
-
-# Подставляем переменные окружения в server.cfg при каждом старте,
-# чтобы пароль RCON и настройки задавались из docker-compose/Umbrel UI.
-envsubst < /server/server.cfg.template > /server/server.cfg
-
-# Если в volume лежат пользовательские gamemodes/filterscripts/scriptfiles —
-# они уже на месте благодаря монтированию ${APP_DATA_DIR}/data в /server/data,
-# здесь линкуем их поверх дефолтных, если присутствуют.
-for d in gamemodes filterscripts scriptfiles; do
-  if [ -d "/server/data/$d" ] && [ "$(ls -A /server/data/$d 2>/dev/null)" ]; then
-    rm -rf "/server/$d"
-    ln -s "/server/data/$d" "/server/$d"
+echo "[entrypoint] Ожидание выбранного сервера..."
+while true; do
+  if [ -f "$ACTIVE_FILE" ]; then
+    NAME=$(grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' "$ACTIVE_FILE" | sed -E 's/.*"name"[[:space:]]*:[[:space:]]*"([^"]*)"/\1/')
+    if [ -n "$NAME" ] && [ -d "$SERVERS_DIR/$NAME" ]; then
+      break
+    fi
   fi
+  echo "[entrypoint] Сервер ещё не выбран в веб-панели (Менеджер серверов -> скачать/выбрать). Жду..."
+  sleep 5
 done
 
-echo "[entrypoint] Starting samp03svr..."
-exec ./samp03svr
+echo "[entrypoint] Запускаю сервер: $NAME"
+rm -rf "$RUN_DIR"
+ln -s "$SERVERS_DIR/$NAME" "$RUN_DIR"
+cd "$RUN_DIR"
+
+# Подставляем актуальный rcon_password в server.cfg пакета, если он есть
+if [ -f "server.cfg" ]; then
+  if grep -q '^rcon_password ' server.cfg; then
+    sed -i "s/^rcon_password .*/rcon_password ${RCON_PASSWORD}/" server.cfg
+  else
+    echo "rcon_password ${RCON_PASSWORD}" >> server.cfg
+  fi
+fi
+
+BIN=$(ls samp03svr omp-server 2>/dev/null | head -n1)
+if [ -z "$BIN" ]; then
+  echo "[entrypoint] Не найден исполняемый файл сервера в $SERVERS_DIR/$NAME"
+  sleep infinity
+fi
+chmod +x "./$BIN"
+echo "[entrypoint] exec ./$BIN"
+exec "./$BIN"

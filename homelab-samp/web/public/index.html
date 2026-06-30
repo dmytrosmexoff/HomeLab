@@ -213,5 +213,78 @@ loadStatus(); loadLogs();
 setInterval(loadStatus, 3000);
 setInterval(loadLogs, 5000);
 </script>
+  <div class="panel" id="serverManager">
+    <div class="panel-head"><div class="panel-title">Менеджер серверов</div><div class="label" id="smCount">—</div></div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <input id="smUrl" type="text" placeholder="Прямая ссылка на .zip/.tar.gz со сборкой SA-MP/open.mp сервера" style="flex:2;min-width:240px;background:#0b0d11;border:1px solid var(--line);border-radius:8px;color:#fff;padding:10px 12px;font-size:13px;">
+      <input id="smName" type="text" placeholder="Название (необязательно)" style="flex:1;min-width:140px;background:#0b0d11;border:1px solid var(--line);border-radius:8px;color:#fff;padding:10px 12px;font-size:13px;">
+      <button class="btn btn-start" id="smDownloadBtn" onclick="downloadServer()">Скачать</button>
+    </div>
+    <div id="smProgressWrap" style="display:none;margin-bottom:14px;">
+      <div class="label" id="smProgressMsg">Скачивание...</div>
+      <div class="bar-track" style="margin-top:8px;"><div class="bar-fill" id="smProgressBar" style="width:0%"></div></div>
+    </div>
+    <div id="smList"><div class="empty">Серверов пока нет — вставьте ссылку выше</div></div>
+  </div>
+
+<script>
+async function loadServers(){
+  let data;
+  try{ data = await (await fetch('/api/servers')).json(); } catch(e){ return; }
+  const wrap = document.getElementById('smProgressWrap');
+  const p = data.progress;
+  if(p && (p.state==='downloading' || p.state==='extracting')){
+    wrap.style.display='block';
+    document.getElementById('smProgressMsg').textContent = p.message;
+    document.getElementById('smProgressBar').style.width = p.percent+'%';
+    document.getElementById('smDownloadBtn').disabled = true;
+  } else {
+    wrap.style.display='none';
+    document.getElementById('smDownloadBtn').disabled = false;
+    if(p && p.state==='error') alert('Ошибка скачивания: '+p.error);
+  }
+
+  const list = document.getElementById('smList');
+  const servers = data.servers || [];
+  document.getElementById('smCount').textContent = servers.length+' установлено';
+  if(servers.length===0){
+    list.innerHTML = '<div class="empty">Серверов пока нет — вставьте ссылку выше</div>';
+    return;
+  }
+  list.innerHTML = servers.map(s => `
+    <div class="player-row">
+      <div class="p-left">
+        <input type="radio" name="activeServer" ${s.active?'checked':''} onchange="activateServer('${s.name}')" style="width:16px;height:16px;">
+        <div>${s.name}${s.active?' <span style="color:var(--green);font-size:11px">(активен)</span>':''}${s.ready?'':' <span style="color:var(--yellow);font-size:11px">(не найден бинарник)</span>'}</div>
+      </div>
+      <button class="btn btn-stop" style="padding:6px 12px;font-size:11px" onclick="deleteServer('${s.name}')">Удалить</button>
+    </div>
+  `).join('');
+}
+
+async function downloadServer(){
+  const url = document.getElementById('smUrl').value.trim();
+  const name = document.getElementById('smName').value.trim();
+  if(!url) return alert('Вставьте ссылку на архив сервера');
+  const r = await fetch('/api/servers/download', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url, name})});
+  const j = await r.json();
+  if(!r.ok) return alert('Ошибка: '+(j.error||'неизвестная'));
+  document.getElementById('smUrl').value=''; document.getElementById('smName').value='';
+}
+
+async function activateServer(name){
+  await fetch('/api/servers/'+encodeURIComponent(name)+'/activate', {method:'POST'});
+  setTimeout(loadServers, 1000);
+}
+
+async function deleteServer(name){
+  if(!confirm('Удалить установленный сервер "'+name+'"?')) return;
+  await fetch('/api/servers/'+encodeURIComponent(name), {method:'DELETE'});
+  loadServers();
+}
+
+loadServers();
+setInterval(loadServers, 3000);
+</script>
 </body>
 </html>

@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const Docker = require('dockerode');
 const samp = require('./samp-query');
+const downloader = require('./downloader');
 
 const app = express();
 app.use(express.json());
@@ -13,7 +14,57 @@ const SAMP_HOST = process.env.SAMP_HOST || 'homelab-samp_game_1';
 const SAMP_PORT = parseInt(process.env.SAMP_PORT || '7777', 10);
 const RCON_PASSWORD = process.env.SAMP_RCON_PASSWORD || 'changeme123';
 
+// SA-MP сборки распространяются под разными именами бинарника в зависимости
+// от форка/версии (оригинальный samp03svr, форки open.mp - omp-server и т.д.)
+const ENTRY_CANDIDATES = ['samp03svr', 'samp03svr.exe', 'omp-server', 'omp-server.exe'];
+
 function getContainer() { return docker.getContainer(CONTAINER_NAME); }
+
+// ---- Менеджер серверов: скачать по ссылке / распаковать / выбрать активный ----
+app.get('/api/servers', (req, res) => {
+  res.json({ servers: downloader.listServers(ENTRY_CANDIDATES), progress: downloader.getProgress() });
+});
+
+app.get('/api/servers/progress', (req, res) => {
+  res.json(downloader.getProgress());
+});
+
+app.post('/api/servers/download', async (req, res) => {
+  const { url, name } = req.body || {};
+  if (!url || !/^https?:\/\//i.test(url)) return res.status(400).json({ error: 'Укажите корректную прямую ссылку на .zip или .tar.gz' });
+  res.json({ ok: true, started: true });
+  try {
+    const { slug } = await downloader.downloadAndExtract(url, name || ('samp-' + Date.now()), ENTRY_CANDIDATES);
+    const servers = downloader.listServers(ENTRY_CANDIDATES);
+    if (servers.length === 1) {
+      // первый успешно скачанный сервер сразу делаем активным и стартуем
+      downloader.setActive(slug);
+      try { await getContainer().restart({ t: 10 }); } catch (e) { try { await getContainer().start(); } catch (e2) {} }
+    }
+  } catch (e) {
+    console.error('Ошибка скачивания SA-MP сервера:', e.message);
+  }
+});
+
+app.post('/api/servers/:name/activate', async (req, res) => {
+  try {
+    downloader.setActive(req.params.name);
+    const container = getContainer();
+    try { await container.restart({ t: 10 }); } catch (e) { await container.start(); }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.delete('/api/servers/:name', (req, res) => {
+  try {
+    downloader.removeServer(req.params.name);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 function calcCpuPercent(stats) {
   try {

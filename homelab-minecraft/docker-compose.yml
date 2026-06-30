@@ -11,7 +11,7 @@ services:
     restart: on-failure
 
   # Реальный игровой сервер. Образ itzg/minecraft-server — общеизвестный,
-  # поддерживаемый годами проект, используется как основа десятков Umbrel/Docker паков.
+  # поддерживаемый годами проект; сам скачивает нужную версию/сборку при старте.
   mc:
     image: itzg/minecraft-server:latest
     container_name: homelab-minecraft_mc_1
@@ -36,10 +36,8 @@ services:
     networks:
       - default
 
-  # Веб-панель: общается с mc по настоящему RCON-протоколу и с Docker Engine API
-  # для статистики контейнера (CPU/RAM/аптайм) и старт/стоп/рестарт.
   web:
-    build: ./web
+    image: dmytrosmexoff/minecraft-panel:latest
     container_name: homelab-minecraft_web_1
     restart: on-failure
     depends_on:

@@ -11,17 +11,12 @@ services:
     restart: on-failure
 
   game:
-    build: ./game
+    image: dmytrosmexoff/samp-game:latest
     container_name: homelab-samp_game_1
     restart: on-failure
     stop_grace_period: 30s
     environment:
       RCON_PASSWORD: "${RCON_PASSWORD:-changeme123}"
-      MAX_PLAYERS: "${MAX_PLAYERS:-100}"
-      HOSTNAME_: "${SAMP_HOSTNAME:-HomeLab SA-MP Server}"
-      GAMEMODE: "${GAMEMODE:-rivershell}"
-      GAMEMODE_TEXT: "${GAMEMODE_TEXT:-HomeLab RP}"
-      ANNOUNCE: "${ANNOUNCE:-0}"
     ports:
       - "7777:7777/udp"
     volumes:
@@ -30,7 +25,7 @@ services:
       - default
 
   web:
-    build: ./web
+    image: dmytrosmexoff/samp-panel:latest
     container_name: homelab-samp_web_1
     restart: on-failure
     depends_on:
@@ -40,8 +35,11 @@ services:
       SAMP_PORT: "7777"
       SAMP_RCON_PASSWORD: "${RCON_PASSWORD:-changeme123}"
       DOCKER_CONTAINER_NAME: homelab-samp_game_1
+      SERVERS_DIR: /data/servers
+      ACTIVE_FILE: /data/active.json
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${APP_DATA_DIR}/data:/data
     networks:
       - default
 

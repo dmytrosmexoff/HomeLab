@@ -1,21 +1,31 @@
 #!/bin/bash
 set -e
-cd /server/data
+
+ACTIVE_FILE="/server/data/active.json"
+SERVERS_DIR="/server/data/servers"
+RUN_DIR="/server/run"
+
+echo "[entrypoint] Ожидание выбранного сервера..."
+while true; do
+  if [ -f "$ACTIVE_FILE" ]; then
+    NAME=$(grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' "$ACTIVE_FILE" | sed -E 's/.*"name"[[:space:]]*:[[:space:]]*"([^"]*)"/\1/')
+    if [ -n "$NAME" ] && [ -d "$SERVERS_DIR/$NAME" ]; then
+      break
+    fi
+  fi
+  echo "[entrypoint] Сервер RAGE:MP ещё не выбран в веб-панели (Менеджер серверов -> скачать архив с rage.mp и выбрать). Жду..."
+  sleep 5
+done
+
+echo "[entrypoint] Запускаю сервер: $NAME"
+rm -rf "$RUN_DIR"
+ln -s "$SERVERS_DIR/$NAME" "$RUN_DIR"
+cd "$RUN_DIR"
 
 if [ ! -f "./ragemp-server" ]; then
-  echo "============================================================"
-  echo " Файлы сервера RAGE:MP не найдены в /server/data."
-  echo " 1. Скачайте Linux-сборку сервера на https://rage.mp/ (раздел Download -> Server)"
-  echo " 2. Распакуйте архив в папку данных приложения на Umbrel:"
-  echo "    .../app-data/homelab-ragemp/data/server/"
-  echo "    так, чтобы файл ragemp-server лежал прямо в этой папке"
-  echo " 3. Перезапустите контейнер (кнопка Рестарт в панели)."
-  echo "============================================================"
-  # Не падаем в restart-loop, просто ждём, чтобы пользователь успел положить файлы
-  # и перезапустить контейнер из панели управления.
+  echo "[entrypoint] Не найден ./ragemp-server в $SERVERS_DIR/$NAME"
   sleep infinity
 fi
-
 chmod +x ./ragemp-server
-echo "[entrypoint] Запуск ./ragemp-server..."
+echo "[entrypoint] exec ./ragemp-server"
 exec ./ragemp-server
