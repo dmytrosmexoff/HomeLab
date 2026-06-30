@@ -4,11 +4,13 @@ services:
   app_proxy:
     image: getumbrel/app-proxy:1.7.0
     environment:
-      APP_HOST: homelab-minecraft_app_1
+      APP_HOST: app
       APP_PORT: 5770
     ports:
       - "5770:8080"
     restart: on-failure
+    depends_on:
+      - app
 
   app:
     image: dmytrosmexoff/minecraft-panel:latest

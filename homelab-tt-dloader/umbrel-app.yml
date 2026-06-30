@@ -1,6 +1,6 @@
 manifestVersion: 1
 id: homelab-tt-dloader
-icon: ""
+icon: icon.png
 category: media
 name: "TT DLoader"
 version: "0.0.1"

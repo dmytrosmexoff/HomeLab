@@ -4,11 +4,13 @@ services:
   app_proxy:
     image: getumbrel/app-proxy:1.7.0
     environment:
-      APP_HOST: homelab-ragemp-panel_app_1
+      APP_HOST: app
       APP_PORT: 5680
     ports:
       - "5680:8080"
     restart: on-failure
+    depends_on:
+      - app
 
   app:
     image: dmytrosmexoff/ragemp-panel:latest
