@@ -3,7 +3,7 @@
 FROM debian:bookworm-slim
 
 ARG SAMP_VERSION=R2-2-1
-ARG SAMP_URL=https://files.sa-mp.com/samp03Csvr_R2-2-1.tar.gz
+ARG SAMP_URL=https://gta-multiplayer.cz/downloads/samp037svr_R2-2-1.tar.gz
 
 RUN dpkg --add-architecture i386 && \
     apt-get update && \
