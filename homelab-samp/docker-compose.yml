@@ -16,7 +16,7 @@ services:
     restart: on-failure
     stop_grace_period: 30s
     environment:
-      RCON_PASSWORD: "${RCON_PASSWORD:-changeme123}"
+      RCON_PASSWORD: "${RCON_PASSWORD:-122344}"
     ports:
       - "7777:7777/udp"
     volumes:
@@ -28,12 +28,14 @@ services:
     image: dmytrosmexoff/samp-panel:latest
     container_name: homelab-samp_web_1
     restart: on-failure
-    depends_on:
-      - game
+    # Сюда мы добавили порт, чтобы зайти напрямую в обход всего
+    ports:
+      - "3000:3000"
+    # МЫ УБРАЛИ SECTION DEPENDS_ON, чтобы разорвать замкнутый круг
     environment:
       SAMP_HOST: homelab-samp_game_1
       SAMP_PORT: "7777"
-      SAMP_RCON_PASSWORD: "${RCON_PASSWORD:-changeme123}"
+      SAMP_RCON_PASSWORD: "${RCON_PASSWORD:-122344}"
       DOCKER_CONTAINER_NAME: homelab-samp_game_1
       SERVERS_DIR: /data/servers
       ACTIVE_FILE: /data/active.json
