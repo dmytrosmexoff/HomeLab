@@ -1,0 +1,31 @@
+manifestVersion: 1
+id: homelab-samp
+icon: icon.png
+category: networking
+name: "SA-MP Server"
+version: "1.0.0"
+tagline: Настоящий SA-MP сервер (samp03svr) с панелью управления
+description: >-
+  Реальный сервер SA-MP (San Andreas Multiplayer) — официальный бинарник samp03svr,
+  скачивается при сборке образа с files.sa-mp.com.
+
+  🎮 Настоящий игровой процесс, слушает порт 7777/UDP.
+  📡 Панель опрашивает сервер по официальному query-протоколу SA-MP (тот же, что
+     используют все мониторинги/браузеры серверов) — реальный онлайн, не фейк.
+  🔧 Консольные команды отправляются через настоящий RCON по UDP.
+  📁 Гейммоды/фильтрскрипты можно положить в volume данных приложения — подхватятся
+     автоматически при следующем запуске.
+  🔌 Старт / Стоп / Рестарт управляют настоящим контейнером через Docker Engine API.
+releaseNotes: "Первый релиз: реальный сервер + UDP query/RCON-панель"
+developer: "hlab"
+website: ""
+dependencies: []
+repo: ""
+support: ""
+port: 8092
+gallery: []
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: ""
+submission: ""
