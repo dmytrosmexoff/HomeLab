@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SA-MP Console</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#1a1d24; --card2:#1f232b; --line:#262a33; --muted:#6c727f;
+    --text:#ffffff; --accent1:#3D6BFF; --accent2:#B43DFF; --green:#33d17a; --yellow:#e8b339; --red:#ef4b5f;
+    --grad:linear-gradient(135deg,var(--accent1),var(--accent2));
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:var(--text);min-height:100vh;padding:28px;}
+  .label{font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);}
+  .hidden{display:none !important;}
+
+  /* ---- загрузочный экран ---- */
+  #bootScreen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:50;}
+  .spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent1);animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #bootText{color:var(--muted);font-size:13px;}
+
+  /* ---- экран настройки ---- */
+  #setupScreen{max-width:560px;margin:60px auto;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px;}
+  #setupScreen h2{font-size:18px;margin-bottom:6px;}
+  #setupScreen p{color:var(--muted);font-size:13px;margin-bottom:20px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .field input[type=text],.field input[type=password],.field input[type=number]{
+    width:100%;background:#0b0d11;border:1px solid var(--line);border-radius:8px;color:#fff;padding:10px 12px;font-size:13px;
+  }
+  .field input[type=file]{font-size:12px;color:var(--muted);}
+  .field-row{display:flex;gap:12px;}
+  .field-row .field{flex:1;}
+  #setupMsg{font-size:12px;margin-top:10px;min-height:16px;}
+  #setupMsg.err{color:var(--red);}
+  #setupMsg.ok{color:var(--green);}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:16px;}
+  .brand{display:flex;align-items:center;gap:14px;}
+  .brand-badge{width:46px;height:46px;border-radius:12px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;box-shadow:0 8px 20px rgba(61,107,255,0.35);}
+  .brand h1{font-size:20px;font-weight:800;}
+  .brand .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .status-pill{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);}
+  .dot.off{background:var(--red);box-shadow:0 0 10px var(--red);}
+  .controls{display:flex;gap:10px;}
+  .btn{border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;color:#fff;letter-spacing:.3px;}
+  .btn:active{transform:scale(.96);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-start{background:var(--green);}
+  .btn-restart{background:var(--card2);border:1px solid var(--line);color:#fff;}
+  .btn-stop{background:var(--red);}
+  .btn-primary{background:var(--grad);width:100%;padding:12px;font-size:14px;}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr);}}
+  .stat-card{background:var(--card);border-radius:14px;padding:18px 20px;box-shadow:0 4px 14px rgba(0,0,0,0.3);border:1px solid var(--line);}
+  .stat-top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .stat-value{font-size:30px;font-weight:800;margin-top:10px;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .stat-icon{font-size:18px;opacity:.5;}
+  .stat-sub{font-size:11px;color:var(--muted);margin-top:6px;}
+
+  .main-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;}
+  @media(max-width:1100px){.main-grid{grid-template-columns:1fr;}}
+  .panel{background:var(--card);border-radius:14px;border:1px solid var(--line);padding:20px;margin-bottom:16px;}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .panel-title{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#cfd3da;}
+  canvas{width:100%;display:block;}
+
+  .console{background:#0b0d11;border-radius:10px;padding:14px;height:260px;overflow-y:auto;font-family:'SF Mono',Consolas,monospace;font-size:12.5px;line-height:1.7;border:1px solid var(--line);}
+  .console .ln{white-space:pre-wrap;word-break:break-word;}
+  .ln .t{color:var(--muted);}
+  .ln.info{color:#9fb4ff;} .ln.join{color:var(--green);} .ln.leave{color:var(--yellow);} .ln.warn{color:var(--red);}
+  .console-input{display:flex;gap:8px;margin-top:12px;}
+  .console-input input{flex:1;background:#0b0d11;border:1px solid var(--line);border-radius:8px;color:#fff;padding:10px 12px;font-size:13px;font-family:'SF Mono',Consolas,monospace;}
+  .console-input button{background:var(--grad);border:none;border-radius:8px;color:#fff;padding:0 18px;font-weight:700;cursor:pointer;}
+  .console-input button:disabled{opacity:.4;cursor:not-allowed;}
+
+  .players{max-height:340px;overflow-y:auto;}
+  .player-row{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--line);font-size:13px;}
+  .player-row:last-child{border-bottom:none;}
+  .p-left{display:flex;align-items:center;gap:10px;}
+  .p-id{width:26px;height:26px;border-radius:7px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);font-weight:700;}
+  .p-name{font-weight:600;}
+  .p-ping{font-size:11px;color:var(--muted);}
+  .p-ping.good{color:var(--green);} .p-ping.med{color:var(--yellow);} .p-ping.bad{color:var(--red);}
+  .kick{background:none;border:1px solid var(--line);color:var(--muted);border-radius:6px;font-size:11px;padding:4px 9px;cursor:pointer;}
+  .kick:hover{border-color:var(--red);color:var(--red);}
+  .empty-hint{color:var(--muted);font-size:12px;padding:16px 4px;}
+
+  .info-list{display:flex;flex-direction:column;gap:0;}
+  .info-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .info-row:last-child{border-bottom:none;}
+  .info-row .k{color:var(--muted);}
+  .info-row .v{font-weight:700;}
+  .bar-track{width:100%;height:6px;background:var(--card2);border-radius:4px;overflow:hidden;margin-top:8px;}
+  .bar-fill{height:100%;background:var(--grad);border-radius:4px;transition:width .4s;}
+  ::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<div id="bootScreen"><div class="spinner"></div><div id="bootText">Подключение к API...</div></div>
+
+<div id="setupScreen" class="hidden">
+  <h2>Настройка SA-MP сервера</h2>
+  <p>Загрузите gamemode (.amx), при желании — filterscripts, и укажите базовые параметры сервера.</p>
+  <div class="field">
+    <label>Gamemode (.amx)</label>
+    <input type="file" id="fGamemode" accept=".amx">
+  </div>
+  <div class="field">
+    <label>Filterscripts (.amx, можно несколько)</label>
+    <input type="file" id="fFilterscripts" accept=".amx" multiple>
+  </div>
+  <div class="field"><label>Название сервера (hostname)</label><input type="text" id="fHostname" value="Мой SA-MP сервер"></div>
+  <div class="field-row">
+    <div class="field"><label>RCON пароль</label><input type="password" id="fRcon" placeholder="минимум 4 символа"></div>
+    <div class="field"><label>Макс. игроков</label><input type="number" id="fMax" value="50" min="1" max="500"></div>
+  </div>
+  <button class="btn btn-primary" id="btnSetup">Сохранить и подготовить сервер</button>
+  <div id="setupMsg"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-badge">SA</div>
+      <div><h1>SA-MP Server Console</h1><div class="sub" id="brandSub">0.3.7-R2 &nbsp;•&nbsp; порт 7777</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div class="status-pill"><span class="dot off" id="statusDot"></span><span id="statusText">Офлайн</span></div>
+      <div class="controls">
+        <button class="btn btn-restart" id="btnRestart">Рестарт</button>
+        <button class="btn btn-stop" id="btnStop">Стоп</button>
+        <button class="btn btn-start" id="btnStart">Старт</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="stat-card"><div class="stat-top"><span class="label">Игроки</span><span class="stat-icon">👥</span></div><div class="stat-value" id="statPlayers">0/0</div><div class="stat-sub" id="statPlayersSub">—</div></div>
+    <div class="stat-card"><div class="stat-top"><span class="label">CPU процесса</span><span class="stat-icon">🧮</span></div><div class="stat-value" id="statCpu">—</div><div class="stat-sub">реальная нагрузка samp03svr</div></div>
+    <div class="stat-card"><div class="stat-top"><span class="label">RAM процесса</span><span class="stat-icon">💾</span></div><div class="stat-value" id="statRam">—</div><div class="stat-sub">RSS samp03svr</div></div>
+    <div class="stat-card"><div class="stat-top"><span class="label">Аптайм</span><span class="stat-icon">⏱</span></div><div class="stat-value" id="statUptime">—</div><div class="stat-sub">с момента старта</div></div>
+  </div>
+
+  <div class="main-grid">
+    <div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Игроки онлайн</div><div class="label" id="chartNow">сейчас: 0</div></div>
+        <canvas id="chart" height="160"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Консоль сервера</div></div>
+        <div class="console" id="consoleBox"></div>
+        <div class="console-input">
+          <input id="cmdInput" type="text" placeholder="Команда, например: gmx" disabled>
+          <button id="btnSend" disabled>Отправить</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Информация о сервере</div></div>
+        <div class="info-list">
+          <div class="info-row"><span class="k">Режим</span><span class="v" id="infoGamemode">—</span></div>
+          <div class="info-row"><span class="k">Слотов</span><span class="v" id="infoSlots">—</span></div>
+          <div class="info-row"><span class="k">Пароль</span><span class="v" id="infoPassword">—</span></div>
+          <div class="info-row"><span class="k">Язык</span><span class="v" id="infoLang">—</span></div>
+        </div>
+        <div style="margin-top:14px"><div class="label">Загрузка CPU</div><div class="bar-track"><div class="bar-fill" id="cpuBar" style="width:0%"></div></div></div>
+        <div style="margin-top:14px"><div class="label">Загрузка RAM</div><div class="bar-track"><div class="bar-fill" id="ramBar" style="width:0%"></div></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Онлайн игроки</div><div class="label" id="playersCount">0</div></div>
+        <div class="players" id="playersList"><div class="empty-hint">Нет игроков онлайн</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let cfgMaxPlayers = 50;
+let history = [];
+let running = false;
+
+async function api(path, opts) {
+  const res = await fetch('/api' + path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('Ошибка ' + res.status));
+  return data;
+}
+
+function logLine(type, msg) {
+  const box = $('consoleBox');
+  const time = new Date().toLocaleTimeString('ru-RU');
+  const div = document.createElement('div');
+  div.className = 'ln ' + type;
+  div.innerHTML = `<span class="t">[${time}]</span> ${escapeHtml(msg)}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  while (box.children.length > 200) box.removeChild(box.firstChild);
+}
+function escapeHtml(s) { return s.replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function classifyLine(l) {
+  if (/connected/i.test(l)) return 'join';
+  if (/disconnect/i.test(l)) return 'leave';
+  if (/error|fail/i.test(l)) return 'warn';
+  return 'info';
+}
+
+// ---------- boot ----------
+async function boot() {
+  try {
+    await api('/health');
+  } catch (e) {
+    $('bootText').textContent = 'API недоступен, повторная попытка...';
+    setTimeout(boot, 2000);
+    return;
+  }
+  const state = await api('/state');
+  $('bootScreen').classList.add('hidden');
+  if (!state.hasGamemode || !state.configured) {
+    $('setupScreen').classList.remove('hidden');
+    setupHandlers();
+  } else {
+    cfgMaxPlayers = parseInt(state.config.maxplayers || '50', 10);
+    startApp(state);
+  }
+}
+
+function setupHandlers() {
+  $('btnSetup').onclick = async () => {
+    const msg = $('setupMsg');
+    msg.className = ''; msg.textContent = '';
+    const gmFile = $('fGamemode').files[0];
+    if (!gmFile) { msg.className = 'err'; msg.textContent = 'Выберите файл gamemode'; return; }
+    try {
+      const fd = new FormData(); fd.append('file', gmFile);
+      const gmRes = await fetch('/api/upload/gamemode', { method: 'POST', body: fd });
+      const gmData = await gmRes.json();
+      if (!gmRes.ok) throw new Error(gmData.error);
+
+      for (const f of $('fFilterscripts').files) {
+        const fd2 = new FormData(); fd2.append('file', f);
+        await fetch('/api/upload/filterscript', { method: 'POST', body: fd2 });
+      }
+
+      await api('/config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hostname: $('fHostname').value, rcon_password: $('fRcon').value,
+          maxplayers: parseInt($('fMax').value, 10), gamemode: gmData.name, announce: false,
+        }),
+      });
+
+      msg.className = 'ok'; msg.textContent = 'Готово! Запускаю панель...';
+      cfgMaxPlayers = parseInt($('fMax').value, 10);
+      setTimeout(() => { $('setupScreen').classList.add('hidden'); startApp(); }, 800);
+    } catch (e) {
+      msg.className = 'err'; msg.textContent = e.message;
+    }
+  };
+}
+
+// ---------- основное приложение ----------
+function startApp() {
+  $('app').classList.remove('hidden');
+  connectConsole();
+  bindControls();
+  poll();
+  setInterval(poll, 3000);
+  drawChart();
+  window.addEventListener('resize', drawChart);
+}
+
+function bindControls() {
+  $('btnStart').onclick = async () => { try { await api('/start', { method: 'POST' }); } catch (e) { logLine('warn', e.message); } };
+  $('btnStop').onclick = async () => { try { await api('/stop', { method: 'POST' }); } catch (e) { logLine('warn', e.message); } };
+  $('btnRestart').onclick = async () => { try { await api('/restart', { method: 'POST' }); } catch (e) { logLine('warn', e.message); } };
+  $('btnSend').onclick = sendCmd;
+  $('cmdInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendCmd(); });
+}
+
+let ws;
+function connectConsole() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws/console`);
+  ws.onmessage = (ev) => {
+    const data = JSON.parse(ev.data);
+    if (data.type === 'backlog') { data.lines.forEach((l) => logLine(classifyLine(l.line), l.line)); }
+    if (data.type === 'line') { logLine(classifyLine(data.line), data.line); }
+  };
+  ws.onclose = () => setTimeout(connectConsole, 2000);
+}
+
+function sendCmd() {
+  const input = $('cmdInput');
+  const v = input.value.trim();
+  if (!v || !running) return;
+  ws.send(JSON.stringify({ type: 'command', command: v }));
+  input.value = '';
+}
+
+async function poll() {
+  try {
+    const state = await api('/state');
+    running = state.running;
+    setRunningUI(running);
+    if (state.startedAt) setUptime(Math.floor((Date.now() - state.startedAt) / 1000));
+  } catch (e) { /* ignore */ }
+
+  if (running) {
+    try {
+      const stats = await api('/stats');
+      if (stats.running) {
+        $('statCpu').textContent = stats.cpuPercent + '%';
+        $('statRam').textContent = stats.ramMb + ' MB';
+        $('cpuBar').style.width = Math.min(100, stats.cpuPercent) + '%';
+        $('ramBar').style.width = Math.min(100, (stats.ramMb / 512) * 100) + '%';
+        setUptime(stats.uptimeSeconds);
+      }
+    } catch (e) { /* ignore */ }
+
+    try {
+      const info = await api('/info');
+      $('statPlayers').textContent = info.players + '/' + info.maxplayers;
+      $('statPlayersSub').textContent = 'Реальные данные с сервера';
+      $('infoGamemode').textContent = info.gamemode || '—';
+      $('infoSlots').textContent = info.maxplayers;
+      $('infoPassword').textContent = info.password ? 'Установлен' : 'Нет';
+      $('infoLang').textContent = info.language || '—';
+      $('chartNow').textContent = 'сейчас: ' + info.players;
+      history.push(info.players); if (history.length > 60) history.shift();
+      drawChart();
+    } catch (e) { /* сервер ещё не готов отвечать на query — это нормально в первые секунды */ }
+
+    try {
+      const players = await api('/players');
+      renderPlayers(players);
+    } catch (e) { /* ignore */ }
+  }
+}
+
+function setRunningUI(isRunning) {
+  $('statusDot').classList.toggle('off', !isRunning);
+  $('statusText').textContent = isRunning ? 'Онлайн' : 'Офлайн';
+  $('cmdInput').disabled = !isRunning;
+  $('btnSend').disabled = !isRunning;
+  $('btnStart').disabled = isRunning;
+  $('btnStop').disabled = !isRunning;
+  if (!isRunning) {
+    $('statPlayers').textContent = '0/' + cfgMaxPlayers;
+    $('statCpu').textContent = '—'; $('statRam').textContent = '—'; $('statUptime').textContent = '—';
+    $('playersList').innerHTML = '<div class="empty-hint">Сервер не запущен</div>';
+  }
+}
+
+function setUptime(sec) {
+  const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+  $('statUptime').textContent = d > 0 ? `${d}д ${h}ч` : `${h}ч ${m}м`;
+}
+
+function renderPlayers(players) {
+  const list = $('playersList');
+  $('playersCount').textContent = players.length;
+  if (!players.length) { list.innerHTML = '<div class="empty-hint">Нет игроков онлайн</div>'; return; }
+  list.innerHTML = '';
+  players.forEach((p) => {
+    const cls = p.ping < 60 ? 'good' : p.ping < 130 ? 'med' : 'bad';
+    const row = document.createElement('div');
+    row.className = 'player-row';
+    row.innerHTML = `<div class="p-left"><div class="p-id">${p.id}</div><div><div class="p-name">${escapeHtml(p.name)}</div><div class="p-ping ${cls}">${p.ping} ms</div></div></div><button class="kick" data-id="${p.id}">Кикнуть</button>`;
+    row.querySelector('.kick').onclick = () => kick(p.id, p.name);
+    list.appendChild(row);
+  });
+}
+
+async function kick(id, name) {
+  if (!running) return;
+  ws.send(JSON.stringify({ type: 'command', command: 'kick ' + id }));
+  logLine('leave', name + ': команда kick отправлена');
+}
+
+function drawChart() {
+  const c = $('chart');
+  const ctx = c.getContext('2d');
+  const w = c.clientWidth, h = 160;
+  c.width = w; c.height = h;
+  ctx.clearRect(0, 0, w, h);
+  if (history.length < 2) return;
+  const max = Math.max(...history, 5) + 5;
+  const step = w / (history.length - 1);
+
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(61,107,255,0.35)'); grad.addColorStop(1, 'rgba(180,61,255,0.0)');
+  ctx.beginPath();
+  history.forEach((v, i) => { const x = i * step, y = h - (v / max) * h; i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+
+  ctx.beginPath();
+  history.forEach((v, i) => { const x = i * step, y = h - (v / max) * h; i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  const lg = ctx.createLinearGradient(0, 0, w, 0);
+  lg.addColorStop(0, '#3D6BFF'); lg.addColorStop(1, '#B43DFF');
+  ctx.strokeStyle = lg; ctx.lineWidth = 2.5; ctx.stroke();
+}
+
+boot();
+</script>
+</body>
+</html>
