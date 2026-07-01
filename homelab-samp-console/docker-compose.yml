@@ -1,0 +1,36 @@
+version: "3.7"
+
+services:
+  samp-server:
+    image: debian:bullseye-slim
+    container_name: samp-console_samp-server_1
+    restart: unless-stopped
+    working_dir: /server
+    volumes:
+      - ${APP_DATA_DIR}/server:/server
+    command: >
+      bash -c "dpkg --add-architecture i386 &&
+      apt-get update &&
+      apt-get install -y libc6:i386 libstdc++6:i386 &&
+      chmod +x /server/samp03svr &&
+      /server/samp03svr"
+    ports:
+      - "7777:7777/tcp"
+      - "7777:7777/udp"
+    network_mode: bridge
+
+  web-panel:
+    build: ./web
+    container_name: samp-console_web-panel_1
+    restart: unless-stopped
+    environment:
+      - RCON_HOST=samp-console_samp-server_1
+      - RCON_PORT=7777
+      - DOCKER_TARGET=samp-console_samp-server_1
+    volumes:
+      - ${APP_DATA_DIR}/server:/serverdata:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "3010:3000"
+    depends_on:
+      - samp-server

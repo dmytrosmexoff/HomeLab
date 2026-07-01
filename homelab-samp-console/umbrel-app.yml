@@ -1,0 +1,23 @@
+manifestVersion: 1
+id: samp-console
+category: networking
+name: SA-MP Console
+version: "1.0.0"
+tagline: Панель управления SA-MP сервером
+description: >-
+  Запуск, остановка, рестарт и мониторинг SA-MP сервера через веб-панель
+  с реальными данными по RCON (игроки, пинг, CPU, RAM).
+developer: dmytrosmexoff
+website: https://github.com/dmytrosmexoff/HomeLab
+dependencies: []
+repo: https://github.com/dmytrosmexoff/HomeLab
+support: https://github.com/dmytrosmexoff/HomeLab/issues
+port: 3010
+gallery:
+  - "1.jpg"
+  - "2.jpg"
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: dmytrosmexoff
+submission: https://github.com/dmytrosmexoff/HomeLab
