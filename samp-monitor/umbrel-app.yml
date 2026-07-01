@@ -1,6 +1,7 @@
 manifestVersion: 1
 id: homelab-samp-monitor
 category: networking
+icon: icon.png
 name: SA-MP Server Monitor
 version: "0.0.1"
 tagline: Хостинг и реальный мониторинг SA-MP сервера
