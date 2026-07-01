@@ -5,15 +5,16 @@ function sendRcon(host, port, password, command, timeoutMs = 1500) {
   return new Promise((resolve, reject) => {
     const socket = dgram.createSocket('udp4');
     const ipParts = [0, 0, 0, 0]; // хост подставляется DNS-резолвом ниже, тело пакета IP не критично
-    const opcode = Buffer.from('x');
+    const opcode = Buffer.from('x'); // ровно 1 байт, без префикса длины — так требует протокол SA-MP
     const passBuf = Buffer.from(password, 'ascii');
     const cmdBuf = Buffer.from(command, 'ascii');
 
+    // Формат пакета: "SAMP" + IP(4) + port(2, LE) + opcode(1) +
+    // passLen(2, LE) + pass + cmdLen(2, LE) + cmd
     const header = Buffer.concat([
       Buffer.from('SAMP'),
       Buffer.from(ipParts),
       Buffer.from([port & 0xff, (port >> 8) & 0xff]),
-      Buffer.from([opcode.length & 0xff, (opcode.length >> 8) & 0xff]),
       opcode,
       Buffer.from([passBuf.length & 0xff, (passBuf.length >> 8) & 0xff]),
       passBuf,

@@ -8,8 +8,8 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const TARGET = process.env.DOCKER_TARGET || 'samp-console_samp-server_1';
-const RCON_HOST = process.env.RCON_HOST || 'samp-console_samp-server_1';
+const TARGET = process.env.DOCKER_TARGET || 'homelab-samp-console_samp-server_1';
+const RCON_HOST = process.env.RCON_HOST || 'homelab-samp-console_samp-server_1';
 const RCON_PORT = parseInt(process.env.RCON_PORT || '7777', 10);
 
 function readRconPassword() {

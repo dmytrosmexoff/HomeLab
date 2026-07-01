@@ -1,9 +1,18 @@
 version: "3.7"
 
 services:
+  app_proxy:
+    image: getumbrel/app-proxy:1.7.0
+    environment:
+      APP_HOST: homelab-samp-console_web-panel_1
+      APP_PORT: 3000
+    ports:
+      - "3010:8080"
+    restart: on-failure
+
   samp-server:
     image: debian:bullseye-slim
-    container_name: samp-console_samp-server_1
+    container_name: homelab-samp-console_samp-server_1
     restart: unless-stopped
     working_dir: /server
     volumes:
@@ -17,20 +26,17 @@ services:
     ports:
       - "7777:7777/tcp"
       - "7777:7777/udp"
-    network_mode: bridge
 
   web-panel:
     build: ./web
-    container_name: samp-console_web-panel_1
+    container_name: homelab-samp-console_web-panel_1
     restart: unless-stopped
     environment:
-      - RCON_HOST=samp-console_samp-server_1
+      - RCON_HOST=homelab-samp-console_samp-server_1
       - RCON_PORT=7777
-      - DOCKER_TARGET=samp-console_samp-server_1
+      - DOCKER_TARGET=homelab-samp-console_samp-server_1
     volumes:
       - ${APP_DATA_DIR}/server:/serverdata:ro
       - /var/run/docker.sock:/var/run/docker.sock
-    ports:
-      - "3010:3000"
     depends_on:
       - samp-server
