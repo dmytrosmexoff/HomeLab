@@ -1,0 +1,11 @@
+version: '3'
+services:
+  samp-hosting:
+    build: .
+    container_name: samp-hosting
+    ports:
+      - "5000:5000"
+    volumes:
+      - /home/umbrel/samp-server:/samp-server   # монтируем папку с сервером
+      - ./logs:/app/logs                       # для хранения истории
+    restart: unless-stopped
