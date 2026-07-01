@@ -18,17 +18,24 @@ services:
     volumes:
       - ${APP_DATA_DIR}/server:/server
     command: >
-      bash -c "dpkg --add-architecture i386 &&
+      bash -c "
+      if [ ! -f /server/samp03svr ]; then
+        echo '[samp-server] Файл /server/samp03svr не найден.';
+        echo '[samp-server] Скопируй файлы сервера в папку данных приложения и перезапусти контейнер (см. README).';
+        exec sleep infinity;
+      fi &&
+      dpkg --add-architecture i386 &&
       apt-get update &&
       apt-get install -y libc6:i386 libstdc++6:i386 &&
       chmod +x /server/samp03svr &&
-      /server/samp03svr"
+      exec /server/samp03svr
+      "
     ports:
       - "7777:7777/tcp"
       - "7777:7777/udp"
 
   web-panel:
-    build: ./web
+    image: dmytrosmexoff/samp-console-web:latest
     container_name: homelab-samp-console_web-panel_1
     restart: unless-stopped
     environment:
