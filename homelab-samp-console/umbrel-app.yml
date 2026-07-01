@@ -1,5 +1,5 @@
 manifestVersion: 1
-id: samp-console
+id: homelab-samp-console
 category: networking
 name: SA-MP Console
 version: "1.0.0"
