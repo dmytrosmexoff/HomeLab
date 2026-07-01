@@ -1,5 +1,4 @@
 version: "3.7"
-
 services:
   samp-monitor-api:
     image: ghcr.io/dmytrosmexoff/samp-monitor-api:latest
@@ -13,12 +12,11 @@ services:
       - PORT=3000
       - GAME_PORT=7777
       - DATA_DIR=/data
-
   samp-monitor-web:
     image: ghcr.io/dmytrosmexoff/samp-monitor-web:latest
     restart: on-failure
-    ports:
-      - "2323:2323"
+    expose:
+      - "2323"
     environment:
       - API_URL=http://samp-monitor-api:3000
       - PORT=2323
