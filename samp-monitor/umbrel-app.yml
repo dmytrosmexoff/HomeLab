@@ -1,8 +1,8 @@
 manifestVersion: 1
-id: samp-monitor
+id: homelab-samp-monitor
 category: networking
 name: SA-MP Server Monitor
-version: "1.0.0"
+version: "0.0.1"
 tagline: Хостинг и реальный мониторинг SA-MP сервера
 description: >-
   Полноценная панель для запуска и управления SA-MP (San Andreas Multiplayer)
