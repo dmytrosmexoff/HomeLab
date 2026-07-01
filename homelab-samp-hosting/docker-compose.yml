@@ -2,7 +2,7 @@ version: '3'
 services:
   samp-hosting:
     build: .
-    container_name: samp-hosting
+    container_name: homelab-samp-hosting
     ports:
       - "5000:5000"
     volumes:
