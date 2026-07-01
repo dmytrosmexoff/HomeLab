@@ -1,5 +1,5 @@
 manifestVersion: 1
-id: samp-hosting
+id: homelab-samp-hosting
 name: SA-MP Server Console
 tagline: Веб-панель управления SA-MP сервером
 icon: https://example.com/icon.png  # или можно использовать встроенную иконку
