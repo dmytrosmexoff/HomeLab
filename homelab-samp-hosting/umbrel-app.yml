@@ -15,6 +15,6 @@ dependencies: []
 repo: https://github.com/ваш-репозиторий/samp-hosting
 support: https://github.com/ваш-репозиторий/samp-hosting/issues
 gallery:
-  - https://example.com/screenshot1.png
-  - https://example.com/screenshot2.png
+  - hhttps://media.moddb.com/images/downloads/1/137/136186/s022_1.png
+  - https://i.ytimg.com/vi/h1IiYe0g2bY/maxresdefault.jpg
 releaseNotes: "Первая версия панели управления SA-MP."
