@@ -3,7 +3,7 @@ id: homelab-tiktok-dloader
 icon: icon.png
 category: media
 name: "TikTok DLoader"
-version: "0.0.1"
+version: "0.0.2"
 tagline: Telegram-бот для скачивания видео по ссылке (TikTok и др.)
 description: >-
   TT DLoader — многофункциональный Telegram-бот для скачивания видео/аудио с 12+ популярных платформ, а также полноценная веб-панель для управления статистикой, рассылками, пользователями и медиатекой.
