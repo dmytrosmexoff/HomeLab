@@ -4,17 +4,17 @@ services:
   app_proxy:
     image: getumbrel/app-proxy:1.7.0
     environment:
-      APP_HOST: homelab-tiktok-dloader_app_1
-      APP_PORT: 8091
+      APP_HOST: app
+      APP_PORT: 8090
     ports:
       - "4545:4545"
-    restart: on-failure
+    restart: unless-stopped
 
   app:
     image: dmytrosmexoff/tiktok-bot:latest
-    restart: on-failure
+    restart: unless-stopped
     stop_grace_period: 1m
     volumes:
-      - ${APP_DATA_DIR}/downloads:/data/downloads
+      - ${APP_DATA_DIR}/downloads:/umbrel/umbrel/home/TikTok
       - ${APP_DATA_DIR}/config:/data/config
       - ${APP_DATA_DIR}/media_temp:/data/media_temp
