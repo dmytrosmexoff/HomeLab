@@ -7,7 +7,7 @@ services:
       APP_HOST: homelab-tiktok-dloader_app_1
       APP_PORT: 8091
     ports:
-      - "8091:8080"
+      - "4545:4545"
     restart: on-failure
 
   app:
