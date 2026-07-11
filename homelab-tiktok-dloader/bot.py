@@ -550,9 +550,9 @@ async def start_web_server():
     app.router.add_post('/settings', settings_post)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8090)
+    site = web.TCPSite(runner, '0.0.0.0', 4545)
     await site.start()
-    logging.info("Web server started on 0.0.0.0:8090")
+    logging.info("Web server started on 0.0.0.0:4545")
 
 async def bot_task():
     if not (bot and ADMIN_ID):
