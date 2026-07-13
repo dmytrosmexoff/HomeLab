@@ -13,6 +13,7 @@ SETTINGS_FILE = '/data/config/settings.json'
 STATS_FILE = '/data/config/stats.json'
 MESSAGES_FILE = '/data/config/user_messages.json'
 POLLS_FILE = '/data/config/polls.json'
+FAVORITES_FILE = '/data/config/favorites.json'
 LANG_FILE = '/app/languages.json'
 MEDIA_TEMP = '/data/media_temp/'
 URL_REGEX = r'https?://[^\s]+'
@@ -191,6 +192,22 @@ def add_user_message(user_id: int, user_name: str, text: str):
     messages = messages[:100]
     save_user_messages(messages)
 
+def mark_message_read(msg_id: str):
+    messages = load_user_messages()
+    for m in messages:
+        if m["id"] == msg_id:
+            m["read"] = True
+    save_user_messages(messages)
+
+def set_message_reply(msg_id: str, reply_text: str):
+    messages = load_user_messages()
+    for m in messages:
+        if m["id"] == msg_id:
+            m["read"] = True
+            m["reply"] = reply_text
+            m["replied_at"] = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    save_user_messages(messages)
+
 # ======================== ГОЛОСОВАНИЯ ========================
 def load_polls():
     try:
@@ -220,34 +237,64 @@ def create_poll(question: str, options: list, show_days: int):
     return poll
 
 def vote_in_poll(poll_id: str, user_id: int, option: str):
+    """Юзер может проголосовать, и один раз поменять свой ответ. Возвращает (успех, сообщение)."""
     polls = load_polls()
     for poll in polls:
         if poll["id"] == poll_id:
-            user_votes = poll.get("user_votes", {})
+            if option not in poll["options"]:
+                return False, "❌ Такого варианта нет"
+
+            show_until = poll.get("show_until")
+            if show_until and datetime.now().isoformat() > show_until:
+                return False, "⏳ Голосование уже завершено"
+
+            user_votes = poll.setdefault("user_votes", {})
+            changed_users = poll.setdefault("changed_users", [])
             uid = str(user_id)
-            
-            # Удалить старый голос если есть
+
             old_option = user_votes.get(uid)
-            if old_option and old_option in poll["options"]:
-                if user_id in poll["options"][old_option]:
+
+            if old_option == option:
+                return False, "ℹ️ Ты уже выбрал этот вариант"
+
+            if old_option is not None:
+                # Юзер уже голосовал — это попытка сменить голос
+                if uid in changed_users:
+                    return False, "🚫 Ты уже менял свой голос один раз, повторная смена недоступна"
+                if old_option in poll["options"] and user_id in poll["options"][old_option]:
                     poll["options"][old_option].remove(user_id)
-            
-            # Добавить новый голос
-            if option in poll["options"]:
-                if user_id not in poll["options"][option]:
-                    poll["options"][option].append(user_id)
-                user_votes[uid] = option
-            
+                changed_users.append(uid)
+
+            if user_id not in poll["options"][option]:
+                poll["options"][option].append(user_id)
+            user_votes[uid] = option
+
             poll["user_votes"] = user_votes
+            poll["changed_users"] = changed_users
             save_polls(polls)
-            return True
-    return False
+            return True, "✅ Голос учтён!"
+    return False, "❌ Голосование не найдено"
+
+# ======================== ИЗБРАННОЕ ========================
+def load_favorites():
+    try:
+        with open(FAVORITES_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return {"fav_users": [], "fav_files": {}}
+
+def save_favorites(favs):
+    os.makedirs(os.path.dirname(FAVORITES_FILE), exist_ok=True)
+    with open(FAVORITES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(favs, f, ensure_ascii=False, indent=2)
 
 # ======================== СКАЧИВАНИЕ ========================
 async def do_download(msg, url, user_name, user_id, lang, quality, platform):
     user_folder = os.path.join(SAVE_PATH, f"{user_name}_{user_id}")
     os.makedirs(user_folder, exist_ok=True)
-    
+    log_file = os.path.join(user_folder, "history.txt")
+    now_str = datetime.now().strftime("%d.%m.%Y %H:%M")
+
     async with DOWNLOAD_SEMAPHORE:
         try:
             ts = int(time.time())
@@ -265,9 +312,13 @@ async def do_download(msg, url, user_name, user_id, lang, quality, platform):
             with yt_dlp.YoutubeDL(opts) as ydl:
                 await asyncio.to_thread(ydl.extract_info, url, download=True)
                 record_download(user_id, user_name, url, platform)
+                with open(log_file, "a", encoding="utf-8") as f:
+                    f.write(f"[{now_str}] [качество: {quality}] [платформа: {platform}] {url}\n")
                 await msg.answer(get_text(lang, "done"))
         except Exception as e:
             record_error(user_id, user_name)
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(f"[{now_str}] [ОШИБКА] [качество: {quality}] [платформа: {platform}] {url}\n")
             await msg.answer(get_text(lang, "error"))
             logging.error(f"Download error: {e}")
 
@@ -377,6 +428,28 @@ textarea { min-height:120px; resize:vertical; }
 .poll-option { font-size:12px; color:#aaa; margin-bottom:4px; display:flex; justify-content:space-between; }
 .poll-bar { width:100%; height:6px; background:#2a2d36; border-radius:3px; overflow:hidden; }
 .poll-fill { height:100%; background:linear-gradient(90deg,#3D6BFF,#B43DFF); }
+.btn-star { background:#2a2d36; border:none; border-radius:8px; color:#aaa; cursor:pointer; padding:4px 10px; font-size:13px; font-weight:600; transition:all 0.2s; }
+.btn-star.active { background:rgba(255,184,77,0.15); color:#ffb84d; }
+.btn-star:hover { opacity:0.8; }
+.name-cell { display:flex; align-items:center; gap:8px; }
+.media-item { border-bottom:1px solid #2a2d36; padding:10px 0; }
+.media-item:last-child { border-bottom:none; }
+.media-item-header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.media-item-header .fname { color:#ccc; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:70%; }
+.media-item video, .media-item audio { width:100%; margin-top:6px; border-radius:8px; background:#000; }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:100; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal-box { background:#1a1d24; border-radius:16px; padding:24px; max-width:600px; width:90%; max-height:80vh; overflow-y:auto; }
+.modal-box h3 { color:#fff; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+.modal-close { background:none; border:none; color:#aaa; font-size:20px; cursor:pointer; }
+.modal-close:hover { color:#fff; }
+.status-badge { display:inline-block; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600; }
+.status-unread { background:rgba(255,61,119,0.15); color:#ff3d77; }
+.status-read { background:rgba(80,200,120,0.12); color:#4caf50; }
+.reply-box { display:flex; gap:8px; margin-top:8px; }
+.reply-box input { flex:1; }
+.reply-box button { white-space:nowrap; }
+.reply-shown { font-size:12px; color:#6c727f; margin-top:6px; padding-top:6px; border-top:1px dashed #2a2d36; }
 </style>"""
 
 def layout(content, active_tab):
@@ -385,12 +458,9 @@ def layout(content, active_tab):
 async def index(request):
     stats = load_stats()
     users = stats.get("users", {})
-    search_q = request.rel_url.query.get("q", "").lower()
-    
+
     user_list = []
     for uid, info in users.items():
-        if search_q and search_q not in info.get("name", "").lower():
-            continue
         user_list.append({
             "uid": uid,
             "name": info.get("name", "Unknown"),
@@ -399,26 +469,25 @@ async def index(request):
             "last_active": info.get("last_active", ""),
             "urls": info.get("urls", [])
         })
-    
+
     user_list.sort(key=lambda x: x["downloads"], reverse=True)
-    
+
     rows = ""
+    urls_by_uid = {}
     for u in user_list:
-        url_html = "".join([f'<div class="video-item"><a href="{url}" target="_blank">{url[:70]}...</a></div>' for url in u["urls"]])
-        rows += f"""<tr class="expandable-row" onclick="document.getElementById('sub-{u['uid']}').classList.toggle('show')">
-            <td><button class="expand-btn">▼</button> {u['name']}</td>
+        urls_by_uid[u["uid"]] = u["urls"]
+        name_esc = u['name'].replace("'", "\\'")
+        rows += f"""<tr data-name="{u['name'].lower()}">
+            <td><div class="name-cell"><button class="expand-btn" onclick="openModal('{u['uid']}','{name_esc}')">▼</button> {u['name']}</div></td>
             <td>{u['downloads']}</td>
             <td>{u['last_active']}</td>
             <td><span class="badge badge-error">{u['errors']}</span></td>
-        </tr>
-        <tr class="sub-row" id="sub-{u['uid']}">
-            <td colspan="4" style="padding:16px;"><div style="font-size:12px;color:#aaa;">Загруженные ссылки:</div>{url_html if url_html else '<div style="color:#666; margin-top:8px;">Нет ссылок</div>'}</td>
         </tr>"""
-    
+
     uptime = str(timedelta(seconds=int(time.time()-START_TIME)))
     total_dl = sum(u["downloads"] for u in user_list)
     total_err = sum(u["errors"] for u in user_list)
-    
+
     c = f"""<div class="header"><div class="logo">📊 Статистика</div><div style="color:#6c727f; font-size:14px;">Аптайм: {uptime}</div></div>
     <div class="cards">
         <div class="kpi"><div class="val">{len(user_list)}</div><div class="lbl">Пользователей</div></div>
@@ -427,48 +496,87 @@ async def index(request):
     </div>
     <div class="panel">
         <h2>🔍 Поиск пользователя</h2>
-        <form method="get" class="search-box">
-            <input type="text" name="q" placeholder="Введите имя..." value="{search_q}">
-            <button type="submit" class="btn btn-primary">Поиск</button>
-        </form>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Введите имя..." oninput="filterRows()">
+        </div>
     </div>
     <div class="panel">
         <h2>👥 Пользователи</h2>
-        <table>
-            <thead><tr><th>👤 Имя</th><th onclick="sortCol(this, 1)">📥 Видео</th><th onclick="sortCol(this, 2)">🕐 Последнее</th><th onclick="sortCol(this, 3)">❌ Ошибок</th></tr></thead>
+        <table id="usersTable">
+            <thead><tr><th onclick="sortCol(this, 0)">👤 Имя</th><th onclick="sortCol(this, 1)">📥 Видео</th><th onclick="sortCol(this, 2)">🕐 Последнее</th><th onclick="sortCol(this, 3)">❌ Ошибок</th></tr></thead>
             <tbody>{rows if rows else '<tr><td colspan="4" style="text-align:center;color:#666;">Нет данных</td></tr>'}</tbody>
         </table>
     </div>
+
+    <div class="modal-overlay" id="linksModal">
+        <div class="modal-box">
+            <h3><span id="modalTitle">Ссылки</span><button class="modal-close" onclick="closeModal()">✕</button></h3>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
     <script>
+    const urlsByUid = {json.dumps(urls_by_uid, ensure_ascii=False)};
+
+    function openModal(uid, name) {{
+        document.getElementById('modalTitle').textContent = 'Ссылки: ' + name;
+        const urls = urlsByUid[uid] || [];
+        const body = document.getElementById('modalBody');
+        if (urls.length === 0) {{
+            body.innerHTML = '<div style="color:#666;">Нет ссылок</div>';
+        }} else {{
+            body.innerHTML = urls.map(u => `<div class="video-item"><a href="${{u}}" target="_blank">${{u}}</a></div>`).join('');
+        }}
+        document.getElementById('linksModal').classList.add('show');
+    }}
+    function closeModal() {{
+        document.getElementById('linksModal').classList.remove('show');
+    }}
+    document.getElementById('linksModal').addEventListener('click', (e) => {{
+        if (e.target.id === 'linksModal') closeModal();
+    }});
+
+    function filterRows() {{
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        document.querySelectorAll('#usersTable tbody tr').forEach(r => {{
+            const name = r.dataset.name || '';
+            r.style.display = name.includes(q) ? '' : 'none';
+        }});
+    }}
+
     function sortCol(el, col) {{
         const tbody = el.closest('table').querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.classList.contains('sub-row'));
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const asc = el.dataset.asc !== 'true';
+        el.dataset.asc = asc;
         rows.sort((a, b) => {{
-            const aVal = a.cells[col]?.textContent || '';
-            const bVal = b.cells[col]?.textContent || '';
-            return isNaN(aVal) ? aVal.localeCompare(bVal) : parseInt(aVal) - parseInt(bVal);
+            const aVal = a.cells[col]?.textContent.trim() || '';
+            const bVal = b.cells[col]?.textContent.trim() || '';
+            const aNum = parseFloat(aVal), bNum = parseFloat(bVal);
+            let cmp = (!isNaN(aNum) && !isNaN(bNum)) ? aNum - bNum : aVal.localeCompare(bVal);
+            return asc ? cmp : -cmp;
         }});
         rows.forEach(r => tbody.appendChild(r));
     }}
     </script>"""
-    
+
     return web.Response(text=layout(c, "index"), content_type='text/html')
 
 async def media_page(request):
     stats = load_stats()
     users = stats.get("users", {})
-    search_q = request.rel_url.query.get("q", "").lower()
-    
+    favs = load_favorites()
+    fav_users = favs.get("fav_users", [])
+    fav_files = favs.get("fav_files", {})
+
     media_data = []
     for uid, info in users.items():
-        if search_q and search_q not in info.get("name", "").lower():
-            continue
         user_folder = os.path.join(SAVE_PATH, f"{info['name']}_{uid}")
         try:
             files = sorted([f for f in os.listdir(user_folder) if f.endswith(('.mp4', '.mp3'))], reverse=True)
         except:
             files = []
-        
+
         media_data.append({
             "uid": uid,
             "name": info.get("name", "Unknown"),
@@ -477,39 +585,137 @@ async def media_page(request):
             "last_active": info.get("last_active", ""),
             "files": files
         })
-    
-    media_data.sort(key=lambda x: x["videos"], reverse=True)
-    
+
+    # Избранные пользователи — наверх, остальные по числу видео
+    media_data.sort(key=lambda m: (m["uid"] not in fav_users, -m["videos"]))
+
     rows = ""
     for m in media_data:
-        file_html = "".join([f'<div class="video-item"><a href="/media/file?f={f}&uid={m["uid"]}" target="_blank">🎬 {f}</a></div>' for f in m["files"]])
-        rows += f"""<tr class="expandable-row" onclick="document.getElementById('med-{m['uid']}').classList.toggle('show')">
-            <td><button class="expand-btn">▼</button> {m['name']}</td>
+        user_fav = m["uid"] in fav_users
+        star_cls = "btn-star active" if user_fav else "btn-star"
+        star_char = "⭐" if user_fav else "☆"
+
+        user_fav_files = fav_files.get(m["uid"], [])
+        ordered_files = [f for f in user_fav_files if f in m["files"]] + [f for f in m["files"] if f not in user_fav_files]
+
+        files_html = ""
+        for fname in ordered_files:
+            is_fav = fname in user_fav_files
+            f_star_cls = "btn-star active" if is_fav else "btn-star"
+            f_star_char = "⭐" if is_fav else "☆"
+            fpath = f"/media/file?f={fname}&uid={m['uid']}"
+            if fname.endswith('.mp4'):
+                player = f'<video controls preload="none"><source src="{fpath}" type="video/mp4"></video>'
+            else:
+                player = f'<audio controls preload="none"><source src="{fpath}" type="audio/mpeg"></audio>'
+            files_html += f"""<div class="media-item">
+                <div class="media-item-header">
+                    <span class="fname" title="{fname}">🎬 {fname}</span>
+                    <button class="{f_star_cls}" onclick="toggleFav(event,'file','{m['uid']}','{fname}')">{f_star_char}</button>
+                </div>
+                {player}
+            </div>"""
+        if not files_html:
+            files_html = '<div style="color:#666; padding:12px;">Нет файлов</div>'
+
+        rows += f"""<tr class="expandable-row" data-name="{m['name'].lower()}" data-uid="{m['uid']}" onclick="toggleRow(event,'med-{m['uid']}')">
+            <td><div class="name-cell"><button class="expand-btn">▼</button> {m['name']} <button class="{star_cls}" onclick="toggleFav(event,'user','{m['uid']}','')">{star_char}</button></div></td>
             <td>{m['videos']}</td>
             <td>{m['last_active']}</td>
             <td><span class="badge badge-error">{m['errors']}</span></td>
         </tr>
         <tr class="sub-row" id="med-{m['uid']}">
-            <td colspan="4">{file_html if file_html else '<div style="color:#666; padding:12px;">Нет файлов</div>'}</td>
+            <td colspan="4">{files_html}</td>
         </tr>"""
-    
+
     c = f"""<div class="header"><div class="logo">🎬 Медиатека</div></div>
     <div class="panel">
         <h2>🔍 Поиск пользователя</h2>
-        <form method="get" class="search-box">
-            <input type="text" name="q" placeholder="Введите имя..." value="{search_q}">
-            <button type="submit" class="btn btn-primary">Поиск</button>
-        </form>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Введите имя..." oninput="filterRows()">
+        </div>
     </div>
     <div class="panel">
         <h2>👥 Пользователи</h2>
-        <table>
-            <thead><tr><th>👤 Имя</th><th>📹 Видео</th><th>🕐 Последнее</th><th>❌ Ошибок</th></tr></thead>
+        <table id="mediaTable">
+            <thead><tr><th onclick="sortCol(this, 0)">👤 Имя</th><th onclick="sortCol(this, 1)">📹 Видео</th><th onclick="sortCol(this, 2)">🕐 Последнее</th><th onclick="sortCol(this, 3)">❌ Ошибок</th></tr></thead>
             <tbody>{rows if rows else '<tr><td colspan="4" style="text-align:center;color:#666;">Нет данных</td></tr>'}</tbody>
         </table>
-    </div>"""
-    
+    </div>
+    <script>
+    function toggleRow(e, id) {{
+        if (e.target.closest('.btn-star')) return;
+        document.getElementById(id).classList.toggle('show');
+    }}
+    async function toggleFav(e, type, uid, filename) {{
+        e.stopPropagation();
+        const r = await fetch('/media/favorite', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body: JSON.stringify({{type, uid, filename}}) }});
+        const d = await r.json();
+        const btn = e.target;
+        btn.className = d.active ? 'btn-star active' : 'btn-star';
+        btn.textContent = d.active ? '⭐' : '☆';
+        setTimeout(() => location.reload(), 250);
+    }}
+    function filterRows() {{
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        document.querySelectorAll('#mediaTable tbody tr').forEach(r => {{
+            if (r.classList.contains('sub-row')) return;
+            const name = r.dataset.name || '';
+            const show = name.includes(q);
+            r.style.display = show ? '' : 'none';
+        }});
+    }}
+    function sortCol(el, col) {{
+        const tbody = el.closest('table').querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.classList.contains('sub-row'));
+        const asc = el.dataset.asc !== 'true';
+        el.dataset.asc = asc;
+        rows.sort((a, b) => {{
+            const aVal = a.cells[col]?.textContent.trim() || '';
+            const bVal = b.cells[col]?.textContent.trim() || '';
+            const aNum = parseFloat(aVal), bNum = parseFloat(bVal);
+            let cmp = (!isNaN(aNum) && !isNaN(bNum)) ? aNum - bNum : aVal.localeCompare(bVal);
+            return asc ? cmp : -cmp;
+        }});
+        rows.forEach(r => {{
+            tbody.appendChild(r);
+            const sub = document.getElementById('med-' + r.dataset.uid);
+            if (sub) tbody.appendChild(sub);
+        }});
+    }}
+    </script>"""
+
     return web.Response(text=layout(c, "media"), content_type='text/html')
+
+async def media_favorite(request):
+    data = await request.json()
+    favs = load_favorites()
+    favs.setdefault("fav_users", [])
+    favs.setdefault("fav_files", {})
+    ftype = data.get("type")
+    uid = data.get("uid", "")
+
+    if ftype == "user":
+        if uid in favs["fav_users"]:
+            favs["fav_users"].remove(uid)
+            active = False
+        else:
+            favs["fav_users"].insert(0, uid)
+            active = True
+    elif ftype == "file":
+        filename = data.get("filename", "")
+        favs["fav_files"].setdefault(uid, [])
+        if filename in favs["fav_files"][uid]:
+            favs["fav_files"][uid].remove(filename)
+            active = False
+        else:
+            favs["fav_files"][uid].insert(0, filename)
+            active = True
+    else:
+        return web.Response(status=400)
+
+    save_favorites(favs)
+    return web.Response(text=json.dumps({"active": active}), content_type="application/json")
 
 async def media_file(request):
     file = request.rel_url.query.get("f", "")
@@ -527,28 +733,46 @@ async def media_file(request):
 async def broadcast_page(request):
     messages = load_user_messages()
     polls = load_polls()
-    
+
     msg_rows = ""
-    for m in messages[:20]:
-        msg_rows += f"<tr><td>{m['timestamp']}</td><td>{m['user_name']}</td><td>{m['text'][:60]}</td></tr>"
-    
+    for m in messages[:50]:
+        status_cls = "status-read" if m.get("read") else "status-unread"
+        status_txt = "✅ Прочитано" if m.get("read") else "🔴 Новое"
+        reply_html = ""
+        if m.get("reply"):
+            reply_html = f'<div class="reply-shown">↩️ Ответ ({m.get("replied_at","")}): {m["reply"]}</div>'
+        msg_rows += f"""<tr>
+            <td style="white-space:nowrap;">{m['timestamp']}</td>
+            <td>{m['user_name']}</td>
+            <td>{m['text'][:200]}{reply_html}</td>
+            <td><span class="status-badge {status_cls}">{status_txt}</span></td>
+            <td>
+                <div class="reply-box">
+                    <input type="text" id="reply-{m['id']}" placeholder="Написать ответ...">
+                    <button class="btn btn-primary" onclick="sendReply('{m['id']}')">Ответить</button>
+                </div>
+            </td>
+        </tr>"""
+
     poll_rows = ""
     for p in polls:
         total = sum(len(v) for v in p["options"].values())
+        active = p.get("active", True) and (not p.get("show_until") or datetime.now().isoformat() <= p["show_until"])
+        status_txt = "🟢 Активно" if active else "⚪ Завершено"
         opts_html = ""
         for opt, voters in p["options"].items():
             pct = int(len(voters) / total * 100) if total > 0 else 0
-            opts_html += f'<div class="poll-result"><div class="poll-option"><span>{opt}</span><span>{len(voters)} голосов</span></div><div class="poll-bar"><div class="poll-fill" style="width:{pct}%"></div></div></div>'
-        poll_rows += f'<tr><td>{p["question"]}</td><td>{total}</td><td>{opts_html}</td></tr>'
-    
+            opts_html += f'<div class="poll-result"><div class="poll-option"><span>{opt}</span><span>{len(voters)} голосов ({pct}%)</span></div><div class="poll-bar"><div class="poll-fill" style="width:{pct}%"></div></div></div>'
+        poll_rows += f'<tr><td>{p["question"]}</td><td>{total}</td><td>{status_txt}</td><td>{opts_html}</td></tr>'
+
     c = f"""<div class="header"><div class="logo">📢 Рассылка</div></div>
-    <div class="panel"><h2>📩 Отправить сообщение</h2>
+    <div class="panel"><h2>📩 Новое уведомление</h2>
     <form action="/api/broadcast" method="post">
         <div class="form-group"><label>Текст</label><textarea name="text" required></textarea></div>
         <button type="submit" class="btn btn-primary">Отправить всем</button>
     </form></div>
     <div class="panel"><h2>💬 Сообщения от пользователей</h2>
-    <table><thead><tr><th>Дата</th><th>Пользователь</th><th>Сообщение</th></tr></thead><tbody>{msg_rows if msg_rows else '<tr><td colspan="3" style="text-align:center;color:#666;">Нет сообщений</td></tr>'}</tbody></table></div>
+    <table><thead><tr><th>Дата</th><th>Пользователь</th><th>Сообщение</th><th>Статус</th><th>Ответ</th></tr></thead><tbody>{msg_rows if msg_rows else '<tr><td colspan="5" style="text-align:center;color:#666;">Нет сообщений</td></tr>'}</tbody></table></div>
     <div class="panel"><h2>📊 Создать голосование</h2>
     <form action="/api/poll-create" method="post">
         <div class="form-group"><label>Вопрос</label><input type="text" name="question" required></div>
@@ -556,10 +780,52 @@ async def broadcast_page(request):
         <div class="form-group"><label>Показывать результаты</label><select name="days"><option value="1">1 день</option><option value="7">7 дней</option><option value="14">14 дней</option><option value="30">30 дней</option></select></div>
         <button type="submit" class="btn btn-primary">Создать голосование</button>
     </form></div>
-    <div class="panel"><h2>📈 Текущие голосования</h2>
-    <table><thead><tr><th>Вопрос</th><th>Голосов</th><th>Результаты</th></tr></thead><tbody>{poll_rows if poll_rows else '<tr><td colspan="3" style="text-align:center;color:#666;">Нет голосований</td></tr>'}</tbody></table></div>"""
-    
+    <div class="panel"><h2>📈 Голосования</h2>
+    <table><thead><tr><th>Вопрос</th><th>Всего голосов</th><th>Статус</th><th>Результаты</th></tr></thead><tbody>{poll_rows if poll_rows else '<tr><td colspan="4" style="text-align:center;color:#666;">Нет голосований</td></tr>'}</tbody></table></div>
+    <script>
+    async function sendReply(msgId) {{
+        const input = document.getElementById('reply-' + msgId);
+        const text = input.value.trim();
+        if (!text) return;
+        input.disabled = true;
+        await fetch('/api/message-reply', {{
+            method: 'POST',
+            headers: {{'Content-Type': 'application/json'}},
+            body: JSON.stringify({{id: msgId, text: text}})
+        }});
+        location.reload();
+    }}
+    </script>"""
+
     return web.Response(text=layout(c, "broadcast"), content_type='text/html')
+
+async def api_message_reply(request):
+    data = await request.json()
+    msg_id = data.get("id", "")
+    text = data.get("text", "").strip()
+    if not msg_id or not text:
+        return web.Response(status=400)
+
+    messages = load_user_messages()
+    target = next((m for m in messages if m["id"] == msg_id), None)
+    if not target:
+        return web.Response(status=404)
+
+    if bot:
+        try:
+            await bot.send_message(int(target["user_id"]), f"💬 Ответ от администратора:\n{text}")
+        except Exception as e:
+            logging.error(f"Reply send error: {e}")
+
+    set_message_reply(msg_id, text)
+    return web.Response(text=json.dumps({"ok": True}), content_type="application/json")
+
+async def api_message_read(request):
+    data = await request.json()
+    msg_id = data.get("id", "")
+    if msg_id:
+        mark_message_read(msg_id)
+    return web.Response(text=json.dumps({"ok": True}), content_type="application/json")
 
 async def api_broadcast(request):
     data = await request.post()
@@ -606,10 +872,8 @@ async def vote_handler(query: CallbackQuery):
     poll_id = parts[1]
     option = parts[2]
     user_id = query.from_user.id
-    if vote_in_poll(poll_id, user_id, option):
-        await query.answer("✅ Голос учтён!")
-    else:
-        await query.answer("❌ Ошибка")
+    ok, msg_text = vote_in_poll(poll_id, user_id, option)
+    await query.answer(msg_text, show_alert=not ok)
 
 async def users_page(request):
     stats = load_stats()
@@ -647,9 +911,12 @@ async def start_web():
     app.router.add_get('/', index)
     app.router.add_get('/media', media_page)
     app.router.add_get('/media/file', media_file)
+    app.router.add_post('/media/favorite', media_favorite)
     app.router.add_get('/broadcast', broadcast_page)
     app.router.add_post('/api/broadcast', api_broadcast)
     app.router.add_post('/api/poll-create', api_poll_create)
+    app.router.add_post('/api/message-reply', api_message_reply)
+    app.router.add_post('/api/message-read', api_message_read)
     app.router.add_get('/users', users_page)
     app.router.add_get('/settings', settings_get)
     app.router.add_post('/api/settings', api_settings)
