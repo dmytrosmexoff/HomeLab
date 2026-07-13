@@ -7,7 +7,7 @@ services:
       APP_HOST: app
       APP_PORT: 8090
     ports:
-      - "4545:4545"
+      - "4545:8080"
     restart: unless-stopped
 
   app:
