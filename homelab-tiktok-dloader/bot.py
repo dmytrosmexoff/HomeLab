@@ -2,6 +2,7 @@ import asyncio, os, logging, yt_dlp, re, json, time, uuid
 from datetime import datetime, date, timedelta
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
+from aiogram.utils.media_group import MediaGroupBuilder
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiohttp import web
 
@@ -47,6 +48,7 @@ QUALITY_FORMATS = {
     "low": {"format": "bestvideo[height<=240]+bestaudio/best[height<=240]/best", "merge_output_format": "mp4", "ext": "mp4"},
     "audio": {"format": "bestaudio/best", "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}], "ext": "mp3"},
 }
+FALLBACK_CHAIN = {"best": ["best", "medium", "low"], "medium": ["medium", "low"], "low": ["low"], "audio": ["audio"]}
 
 def detect_platform(url: str) -> str:
     for platform, config in PLATFORM_EXTRACTORS.items():
@@ -112,7 +114,7 @@ def load_stats():
         with open(STATS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except:
-        return {"users": {}, "recent": []}
+        return {"users": {}, "recent": [], "downloads_by_day": {}, "errors_by_day": {}, "platform_stats": {}, "lang_stats": {}}
 
 def save_stats(stats):
     try:
@@ -122,49 +124,101 @@ def save_stats(stats):
     except Exception as e:
         logging.error(f"Stats error: {e}")
 
-def record_download(user_id: int, user_name: str, url: str, platform: str = "unknown"):
-    stats = load_stats()
-    uid = str(user_id)
+def ensure_user(stats: dict, uid: str, user_name: str, lang_code: str = None):
     today = date.today().isoformat()
-    
     stats.setdefault("users", {})
     if uid not in stats["users"]:
         stats["users"][uid] = {
             "name": user_name,
             "downloads": 0,
             "errors": 0,
+            "first_seen": today,
             "last_active": today,
+            "lang": lang_code or "unknown",
             "urls": []
         }
-    
-    stats["users"][uid]["downloads"] = stats["users"][uid].get("downloads", 0) + 1
-    stats["users"][uid]["last_active"] = today
-    stats["users"][uid]["name"] = user_name
-    stats["users"][uid].setdefault("urls", [])
-    stats["users"][uid]["urls"].insert(0, url)
-    stats["users"][uid]["urls"] = stats["users"][uid]["urls"][:50]
-    
+    else:
+        stats["users"][uid]["name"] = user_name
+        stats["users"][uid]["last_active"] = today
+        stats["users"][uid].setdefault("first_seen", today)
+        stats["users"][uid].setdefault("urls", [])
+        if lang_code:
+            stats["users"][uid]["lang"] = lang_code
+    return stats["users"][uid]
+
+def record_user_seen(user_id: int, user_name: str, lang_code: str = None):
+    """Регистрирует пользователя и его язык (напр. при /start), не увеличивая счётчик загрузок."""
+    stats = load_stats()
+    uid = str(user_id)
+    ensure_user(stats, uid, user_name, lang_code)
+    if lang_code:
+        stats.setdefault("lang_stats", {})
+        stats["lang_stats"][lang_code] = stats["lang_stats"].get(lang_code, 0) + 1
     save_stats(stats)
 
-def record_error(user_id: int, user_name: str):
+def record_download(user_id: int, user_name: str, url: str, platform: str = "unknown", lang_code: str = None):
     stats = load_stats()
     uid = str(user_id)
     today = date.today().isoformat()
-    
-    stats.setdefault("users", {})
-    if uid not in stats["users"]:
-        stats["users"][uid] = {
-            "name": user_name,
-            "downloads": 0,
-            "errors": 0,
-            "last_active": today,
-            "urls": []
-        }
-    
-    stats["users"][uid]["errors"] = stats["users"][uid].get("errors", 0) + 1
-    stats["users"][uid]["last_active"] = today
-    
+
+    u = ensure_user(stats, uid, user_name, lang_code)
+    u["downloads"] = u.get("downloads", 0) + 1
+    u["urls"].insert(0, url)
+    u["urls"] = u["urls"][:50]
+
+    stats.setdefault("downloads_by_day", {})
+    stats["downloads_by_day"][today] = stats["downloads_by_day"].get(today, 0) + 1
+
+    stats.setdefault("platform_stats", {})
+    stats["platform_stats"][platform] = stats["platform_stats"].get(platform, 0) + 1
+
+    stats.setdefault("recent", [])
+    stats["recent"].insert(0, {"ts": datetime.now().strftime("%d.%m %H:%M"), "user": user_name, "user_id": user_id, "url": url, "platform": platform})
+    stats["recent"] = stats["recent"][:20]
+
     save_stats(stats)
+
+def record_error(user_id: int, user_name: str, lang_code: str = None):
+    stats = load_stats()
+    uid = str(user_id)
+    today = date.today().isoformat()
+
+    u = ensure_user(stats, uid, user_name, lang_code)
+    u["errors"] = u.get("errors", 0) + 1
+
+    stats.setdefault("errors_by_day", {})
+    stats["errors_by_day"][today] = stats["errors_by_day"].get(today, 0) + 1
+
+    save_stats(stats)
+
+def get_top_languages(limit=10):
+    stats = load_stats()
+    return sorted(stats.get("lang_stats", {}).items(), key=lambda x: x[1], reverse=True)[:limit]
+
+def get_chart_data(days=14):
+    stats = load_stats()
+    today = date.today()
+    labels = [(today - timedelta(days=i)).isoformat() for i in range(days - 1, -1, -1)]
+    dl_by_day = stats.get("downloads_by_day", {})
+    err_by_day = stats.get("errors_by_day", {})
+    users = stats.get("users", {})
+
+    downloads_data = [dl_by_day.get(d, 0) for d in labels]
+    errors_data = [err_by_day.get(d, 0) for d in labels]
+    new_users_data = [sum(1 for u in users.values() if u.get("first_seen") == d) for d in labels]
+    short_labels = [d[5:].replace("-", ".") for d in labels]
+
+    platform_stats = stats.get("platform_stats", {})
+    top_platforms = sorted(platform_stats.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    return {
+        "labels": short_labels,
+        "downloads": downloads_data,
+        "errors": errors_data,
+        "new_users": new_users_data,
+        "top_platforms": top_platforms,
+        "top_languages": get_top_languages(10),
+    }
 
 # ======================== СООБЩЕНИЯ ОТ ЮЗЕРОВ ========================
 def load_user_messages():
@@ -288,44 +342,232 @@ def save_favorites(favs):
     with open(FAVORITES_FILE, 'w', encoding='utf-8') as f:
         json.dump(favs, f, ensure_ascii=False, indent=2)
 
+# ======================== ПРОГРЕСС ========================
+def format_speed(speed_bytes):
+    if speed_bytes is None:
+        return "N/A"
+    units = ['B/s', 'KB/s', 'MB/s', 'GB/s']
+    for unit in units:
+        if speed_bytes < 1024:
+            return f"{speed_bytes:.1f} {unit}"
+        speed_bytes /= 1024
+    return f"{speed_bytes:.1f} TB/s"
+
+def format_eta(seconds):
+    if seconds is None or seconds < 0:
+        return "N/A"
+    if seconds < 60:
+        return f"{int(seconds)} сек"
+    elif seconds < 3600:
+        return f"{int(seconds // 60)} мин {int(seconds % 60)} сек"
+    else:
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        return f"{hours}ч {minutes}м"
+
+def make_progress_hook(uid):
+    """Хук прогресса, привязанный к user_id через замыкание"""
+    def hook(d):
+        try:
+            if d['status'] == 'downloading':
+                total = d.get('total_bytes') or d.get('total_bytes_estimate', 1)
+                downloaded = d.get('downloaded_bytes', 0)
+                percent = int((downloaded / total) * 100) if total else 0
+                if uid in progress_data:
+                    progress_data[uid]["percent"] = percent
+                    progress_data[uid]["speed"] = format_speed(d.get('speed', 0))
+                    progress_data[uid]["eta"] = format_eta(d.get('eta', 0))
+                    progress_data[uid]["status"] = "downloading"
+            elif d['status'] == 'finished':
+                if uid in progress_data:
+                    progress_data[uid]["percent"] = 100
+                    progress_data[uid]["status"] = "completed"
+        except Exception as e:
+            logging.error(f"Progress hook error: {e}")
+    return hook
+
+async def update_progress_deluxe(status_msg, user_id, queue_msg=None):
+    """Анимированный прогресс с часами и спиннером"""
+    clock_frames = ["🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🕚","🕛"]
+    spinner_frames = ["⣾","⣽","⣻","⢿","⡿","⣟","⣯","⣷"]
+    idx = 0
+    progress_msg = None
+    while True:
+        try:
+            if user_id not in progress_data:
+                await asyncio.sleep(0.3)
+                continue
+            data = progress_data[user_id]
+            percent = data.get('percent', 0)
+            speed = data.get('speed', 'N/A')
+            eta = data.get('eta', 'N/A')
+            status = data.get('status', 'downloading')
+
+            if percent >= 100 or status == 'completed':
+                if queue_msg:
+                    try:
+                        await queue_msg.delete()
+                    except:
+                        pass
+                if progress_msg:
+                    try:
+                        await progress_msg.delete()
+                    except:
+                        pass
+                progress_data.pop(user_id, None)
+                break
+
+            clock = clock_frames[idx % len(clock_frames)]
+            spinner = spinner_frames[idx % len(spinner_frames)]
+            idx += 1
+            bar_len = 20
+            filled = int(bar_len * percent / 100)
+            bar = '█' * filled + '░' * (bar_len - filled)
+            text = f"{clock} {percent}% {spinner}\n\n`{bar}`\n⚡ {speed}\n⏱️ {eta}"
+
+            if progress_msg is None:
+                progress_msg = await status_msg.answer(text, parse_mode="Markdown")
+            else:
+                try:
+                    await progress_msg.edit_text(text, parse_mode="Markdown")
+                except:
+                    pass
+            await asyncio.sleep(0.4)
+        except asyncio.CancelledError:
+            if progress_msg:
+                try:
+                    await progress_msg.delete()
+                except:
+                    pass
+            raise
+        except Exception as e:
+            logging.error(f"Progress update error: {e}")
+            await asyncio.sleep(0.4)
+
 # ======================== СКАЧИВАНИЕ ========================
-async def do_download(msg, url, user_name, user_id, lang, quality, platform):
+async def do_download(status_msg, url, user_name, user_id, lang, requested_quality, platform="unknown"):
     user_folder = os.path.join(SAVE_PATH, f"{user_name}_{user_id}")
     os.makedirs(user_folder, exist_ok=True)
     log_file = os.path.join(user_folder, "history.txt")
     now_str = datetime.now().strftime("%d.%m.%Y %H:%M")
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(f"[{now_str}] [запрос: {requested_quality}] [платформа: {platform}] {url}\n")
 
+    chain = FALLBACK_CHAIN.get(requested_quality, [requested_quality])
     async with DOWNLOAD_SEMAPHORE:
-        try:
-            ts = int(time.time())
-            opts = {
-                "format": QUALITY_FORMATS[quality]["format"],
-                "outtmpl": os.path.join(user_folder, f"%(title).30s_{ts}.%(ext)s"),
-                "quiet": True,
-                "no_warnings": True,
-            }
-            if quality != "audio":
-                opts["merge_output_format"] = "mp4"
-            if "postprocessors" in QUALITY_FORMATS[quality]:
-                opts["postprocessors"] = QUALITY_FORMATS[quality]["postprocessors"]
-            
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                await asyncio.to_thread(ydl.extract_info, url, download=True)
-                record_download(user_id, user_name, url, platform)
-                with open(log_file, "a", encoding="utf-8") as f:
-                    f.write(f"[{now_str}] [качество: {quality}] [платформа: {platform}] {url}\n")
-                await msg.answer(get_text(lang, "done"))
-        except Exception as e:
-            record_error(user_id, user_name)
+        achieved_quality = None
+        result_media = None
+
+        for attempt_quality in chain:
+            q_cfg = QUALITY_FORMATS[attempt_quality]
+            format_str = q_cfg["format"]
+            if platform in ("twitter", "facebook"):
+                format_str = "best[ext=mp4]/best"
+            try:
+                ts = int(time.time())
+                opts = {
+                    "format": format_str,
+                    "outtmpl": os.path.join(user_folder, f"%(title).30s_{ts}.%(ext)s"),
+                    "quiet": True,
+                    "no_warnings": True,
+                    "progress_hooks": [make_progress_hook(user_id)],
+                }
+                if attempt_quality != "audio":
+                    opts["merge_output_format"] = "mp4"
+                if "postprocessors" in q_cfg:
+                    opts["postprocessors"] = q_cfg["postprocessors"]
+
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    info = await asyncio.to_thread(ydl.extract_info, url, download=True)
+                    paths = []
+                    if "requested_downloads" in info:
+                        for d in info["requested_downloads"]:
+                            paths.append(d["filepath"])
+                    else:
+                        paths.append(ydl.prepare_filename(info))
+
+                    img_ext = ('.jpg', '.jpeg', '.png', '.webp')
+                    images = [p for p in paths if p.lower().endswith(img_ext)]
+                    videos = [p for p in paths if p.lower().endswith(('.mp4', '.mkv', '.webm'))]
+                    audios = [p for p in paths if p.lower().endswith(('.mp3', '.m4a', '.ogg'))]
+
+                achieved_quality = attempt_quality
+                result_media = (images, videos, audios)
+                break
+            except Exception as e:
+                logging.warning(f"Quality '{attempt_quality}' failed: {e}")
+                continue
+
+        if achieved_quality is None:
+            record_error(user_id, user_name, lang)
             with open(log_file, "a", encoding="utf-8") as f:
-                f.write(f"[{now_str}] [ОШИБКА] [качество: {quality}] [платформа: {platform}] {url}\n")
-            await msg.answer(get_text(lang, "error"))
-            logging.error(f"Download error: {e}")
+                f.write(f"[{now_str}] [ОШИБКА] [качество: {requested_quality}] [платформа: {platform}] {url}\n")
+            try:
+                await status_msg.answer(get_text(lang, "error"))
+            except:
+                pass
+            return
+
+        images, videos, audios = result_media
+        caption = get_text(lang, "done", name=user_name)
+
+        try:
+            if len(images) > 1:
+                mg = MediaGroupBuilder(caption=caption)
+                for p in sorted(images)[:10]:
+                    mg.add_photo(media=types.FSInputFile(p))
+                await status_msg.answer_media_group(media=mg.build())
+            elif audios:
+                await status_msg.answer_audio(types.FSInputFile(audios[0]), caption=caption)
+            elif videos:
+                await status_msg.answer_video(types.FSInputFile(videos[0]), caption=caption)
+            elif images:
+                await status_msg.answer_photo(types.FSInputFile(images[0]), caption=caption)
+            else:
+                await status_msg.answer(caption)
+        except Exception as e:
+            logging.error(f"Send error: {e}")
+            record_error(user_id, user_name, lang)
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(f"[{now_str}] [ОШИБКА ОТПРАВКИ] [качество: {achieved_quality}] [платформа: {platform}] {url}\n")
+            try:
+                await status_msg.answer(get_text(lang, "error"))
+            except:
+                pass
+            return
+
+        record_download(user_id, user_name, url, platform, lang)
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(f"[{now_str}] [качество: {achieved_quality}] [платформа: {platform}] {url}\n")
+
+        if achieved_quality != requested_quality:
+            quality_labels = {
+                "best": get_text(lang, 'btn_best'),
+                "medium": get_text(lang, 'btn_medium'),
+                "low": get_text(lang, 'quality_low'),
+                "audio": get_text(lang, 'btn_audio'),
+            }
+            try:
+                await status_msg.answer(get_text(lang, "downgraded", quality=quality_labels.get(achieved_quality, achieved_quality)))
+            except:
+                pass
+
+        if bot and ADMIN_ID:
+            try:
+                platform_label = get_text(lang, f"platform_{platform}") or platform
+                await bot.send_message(
+                    ADMIN_ID,
+                    f"📥 Скачано медиа:\n👤 {user_name} (`{user_id}`)\n🌐 {platform_label}\n🎚 {achieved_quality}\n🌍 {lang}\n🔗 {url}",
+                    parse_mode="Markdown"
+                )
+            except:
+                pass
 
 # ======================== TELEGRAM HANDLERS ========================
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
     lang = message.from_user.language_code or "en"
+    record_user_seen(message.from_user.id, message.from_user.first_name or "Unknown", lang)
     await message.answer(get_text(lang, "start"))
 
 @dp.message(Command("message"))
@@ -341,44 +583,70 @@ async def message_handler(message: types.Message):
     add_user_message(user_id, user_name, text)
     await message.answer("✅ Сообщение отправлено админу!")
 
-@dp.message(F.text)
-async def handle_text(message: types.Message):
+@dp.message(lambda msg: (msg.text and "http" in msg.text) or (msg.caption and "http" in msg.caption))
+async def ask_quality(message: types.Message):
+    lang = message.from_user.language_code or "en"
+    full_text = message.text or message.caption or ""
+    match = re.search(URL_REGEX, full_text)
+    if not match:
+        return
+
+    url = match.group(0).strip()
     user_id = message.from_user.id
     user_name = message.from_user.first_name or "Unknown"
-    lang = message.from_user.language_code or "en"
-    
-    urls = re.findall(URL_REGEX, message.text)
-    if not urls:
-        return
-    
-    url = urls[0]
     platform = detect_platform(url)
-    await message.answer(get_text(lang, "detected_platform", platform=platform))
-    
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎬 Best", callback_data=f"dl_best_{user_id}"),
-         InlineKeyboardButton(text="📱 Medium", callback_data=f"dl_medium_{user_id}")],
-        [InlineKeyboardButton(text="🐢 Low", callback_data=f"dl_low_{user_id}"),
-         InlineKeyboardButton(text="🔊 Audio", callback_data=f"dl_audio_{user_id}")]
-    ])
-    
-    await message.answer(get_text(lang, "choose_quality"), reply_markup=kb)
-    pending[str(user_id)] = {"url": url, "platform": platform, "user_name": user_name, "lang": lang}
+    platform_label = get_text(lang, f"platform_{platform}") or platform
+    key = uuid.uuid4().hex[:12]
 
-@dp.callback_query()
-async def handle_callback(query: CallbackQuery):
-    if query.data.startswith("dl_"):
-        parts = query.data.split("_")
-        quality = parts[1]
-        user_id = int(parts[2])
-        
-        if str(user_id) not in pending:
-            return
-        
-        data = pending[str(user_id)]
-        await query.answer()
-        await do_download(query.message, data["url"], data["user_name"], user_id, data["lang"], quality, data["platform"])
-        del pending[str(user_id)]
+    now = time.time()
+    for k in list(pending.keys()):
+        if now - pending[k]["ts"] > 600:
+            del pending[k]
+
+    pending[key] = {"url": url, "platform": platform, "user_name": user_name, "user_id": user_id, "lang": lang, "ts": now}
+
+    platform_msg = await message.answer(get_text(lang, "detected_platform", platform=platform_label))
+    pending[key]["platform_msg_id"] = platform_msg.message_id
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=get_text(lang, "btn_best"), callback_data=f"q:best:{key}"),
+         InlineKeyboardButton(text=get_text(lang, "btn_medium"), callback_data=f"q:medium:{key}")],
+        [InlineKeyboardButton(text=get_text(lang, "btn_audio"), callback_data=f"q:audio:{key}")]
+    ])
+    quality_msg = await message.answer(get_text(lang, "choose_quality"), reply_markup=kb)
+    pending[key]["quality_msg_id"] = quality_msg.message_id
+
+@dp.callback_query(F.data.startswith("q:"))
+async def handle_quality_choice(callback: CallbackQuery):
+    parts = callback.data.split(":", 2)
+    if len(parts) != 3:
+        await callback.answer()
+        return
+    _, requested_quality, key = parts
+    info = pending.pop(key, None)
+    if not info:
+        await callback.answer("❌ Ссылка устарела, отправь снова", show_alert=True)
+        return
+
+    for msg_id_key in ("platform_msg_id", "quality_msg_id"):
+        try:
+            await callback.bot.delete_message(callback.message.chat.id, info[msg_id_key])
+        except:
+            pass
+
+    await callback.answer()
+    queue_msg = await callback.message.answer(get_text(info["lang"], "queued"))
+
+    user_id = info["user_id"]
+    progress_data[user_id] = {"percent": 0, "speed": "0 B/s", "eta": "N/A", "status": "starting"}
+    progress_task = asyncio.create_task(update_progress_deluxe(callback.message, user_id, queue_msg))
+
+    try:
+        await do_download(callback.message, info["url"], info["user_name"], user_id, info["lang"], requested_quality, info["platform"])
+    finally:
+        await asyncio.sleep(0.2)
+        progress_task.cancel()
+        progress_data.pop(user_id, None)
 
 # ======================== ВЕБ-СЕРВЕР ========================
 STYLE = """<style>
@@ -396,6 +664,7 @@ body { background:#0f1115; color:#ccc; font-family:-apple-system,BlinkMacSystemF
 .kpi { background:#1a1d24; border-radius:12px; padding:20px; flex:1; min-width:180px; }
 .kpi .val { font-size:28px; font-weight:700; color:#fff; line-height:1.2; }
 .kpi .lbl { font-size:12px; color:#6c727f; margin-top:4px; }
+canvas { width:100% !important; max-height:280px; }
 .panel { background:#1a1d24; border-radius:16px; padding:24px; margin-bottom:24px; }
 .panel h2 { font-size:16px; color:#fff; margin-bottom:20px; font-weight:600; }
 table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -453,7 +722,7 @@ textarea { min-height:120px; resize:vertical; }
 </style>"""
 
 def layout(content, active_tab):
-    return f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dashboard</title>{STYLE}</head><body><div class="wrap"><div class="nav"><div class="logo" style="margin-bottom:24px; padding-left:16px;">📥 TT Dloader</div><a href="/" class="{"active" if active_tab=="index" else ""}">📊 Stats</a><a href="/media" class="{"active" if active_tab=="media" else ""}">🎬 Media</a><a href="/broadcast" class="{"active" if active_tab=="broadcast" else ""}">📢 Broadcast</a><a href="/users" class="{"active" if active_tab=="users" else ""}">👥 Users</a><a href="/settings" class="{"active" if active_tab=="settings" else ""}">⚙️ Settings</a></div><div class="main">{content}</div></div></body></html>"""
+    return f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dashboard</title>{STYLE}<script src="https://cdn.jsdelivr.net/npm/chart.js"></script></head><body><div class="wrap"><div class="nav"><div class="logo" style="margin-bottom:24px; padding-left:16px;">📥 TT Dloader</div><a href="/" class="{"active" if active_tab=="index" else ""}">📊 Stats</a><a href="/media" class="{"active" if active_tab=="media" else ""}">🎬 Media</a><a href="/broadcast" class="{"active" if active_tab=="broadcast" else ""}">📢 Broadcast</a><a href="/users" class="{"active" if active_tab=="users" else ""}">👥 Users</a><a href="/settings" class="{"active" if active_tab=="settings" else ""}">⚙️ Settings</a></div><div class="main">{content}</div></div></body></html>"""
 
 async def index(request):
     stats = load_stats()
@@ -488,11 +757,17 @@ async def index(request):
     total_dl = sum(u["downloads"] for u in user_list)
     total_err = sum(u["errors"] for u in user_list)
 
+    chart_data = get_chart_data(14)
+
     c = f"""<div class="header"><div class="logo">📊 Статистика</div><div style="color:#6c727f; font-size:14px;">Аптайм: {uptime}</div></div>
     <div class="cards">
         <div class="kpi"><div class="val">{len(user_list)}</div><div class="lbl">Пользователей</div></div>
         <div class="kpi"><div class="val">{total_dl}</div><div class="lbl">Загрузок</div></div>
         <div class="kpi"><div class="val">{total_err}</div><div class="lbl">Ошибок</div></div>
+    </div>
+    <div class="panel">
+        <h2>📈 График за 14 дней</h2>
+        <canvas id="statsChart"></canvas>
     </div>
     <div class="panel">
         <h2>🔍 Поиск пользователя</h2>
@@ -517,6 +792,27 @@ async def index(request):
 
     <script>
     const urlsByUid = {json.dumps(urls_by_uid, ensure_ascii=False)};
+
+    new Chart(document.getElementById('statsChart'), {{
+        type: 'line',
+        data: {{
+            labels: {json.dumps(chart_data['labels'])},
+            datasets: [
+                {{ label: 'Загрузки', data: {json.dumps(chart_data['downloads'])}, borderColor: '#3D6BFF', backgroundColor: 'rgba(61,107,255,0.08)', tension: 0.25, fill: true }},
+                {{ label: 'Новые пользователи', data: {json.dumps(chart_data['new_users'])}, borderColor: '#B43DFF', tension: 0.25 }},
+                {{ label: 'Ошибки', data: {json.dumps(chart_data['errors'])}, borderColor: '#ff3d77', tension: 0.25 }}
+            ]
+        }},
+        options: {{
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {{ legend: {{ labels: {{ color: '#ccc' }} }} }},
+            scales: {{
+                x: {{ grid: {{ color: '#2a2d36' }}, ticks: {{ color: '#aaa' }} }},
+                y: {{ grid: {{ color: '#2a2d36' }}, ticks: {{ color: '#aaa' }}, beginAtZero: true }}
+            }}
+        }}
+    }});
 
     function openModal(uid, name) {{
         document.getElementById('modalTitle').textContent = 'Ссылки: ' + name;
@@ -880,11 +1176,11 @@ async def users_page(request):
     users = stats.get("users", {})
     rows = ""
     for uid, info in users.items():
-        rows += f"<tr><td>{info.get('name')}</td><td>{uid}</td><td>{info.get('downloads', 0)}</td><td><span class='badge badge-error'>{info.get('errors', 0)}</span></td></tr>"
+        rows += f"<tr><td>{info.get('name')}</td><td>{uid}</td><td>{info.get('downloads', 0)}</td><td><span class='badge badge-error'>{info.get('errors', 0)}</span></td><td>{info.get('lang', 'unknown')}</td><td>{info.get('first_seen', '-')}</td></tr>"
     
     c = f"""<div class="header"><div class="logo">👥 Пользователи</div></div>
     <div class="panel"><h2>Список</h2>
-    <table><thead><tr><th>Имя</th><th>ID</th><th>Видео</th><th>Ошибок</th></tr></thead><tbody>{rows if rows else '<tr><td colspan="4" style="text-align:center;color:#666;">Нет пользователей</td></tr>'}</tbody></table></div>"""
+    <table><thead><tr><th>Имя</th><th>ID</th><th>Видео</th><th>Ошибок</th><th>Язык</th><th>Первая активность</th></tr></thead><tbody>{rows if rows else '<tr><td colspan="6" style="text-align:center;color:#666;">Нет пользователей</td></tr>'}</tbody></table></div>"""
     return web.Response(text=layout(c, "users"), content_type='text/html')
 
 async def settings_get(request):
