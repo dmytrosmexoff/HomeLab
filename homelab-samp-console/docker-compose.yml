@@ -1,0 +1,49 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    image: getumbrel/app-proxy:1.7.0
+    environment:
+      APP_HOST: homelab-samp-console_web-panel_1
+      APP_PORT: 3000
+    ports:
+      - "3010:8080"
+    restart: on-failure
+
+  samp-server:
+    image: debian:bullseye-slim
+    container_name: homelab-samp-console_samp-server_1
+    restart: unless-stopped
+    working_dir: /server
+    volumes:
+      - ${APP_DATA_DIR}/server:/server
+    command: >
+      bash -c "
+      if [ ! -f /server/samp03svr ]; then
+        echo '[samp-server] Файл /server/samp03svr не найден.';
+        echo '[samp-server] Скопируй файлы сервера в папку данных приложения и перезапусти контейнер (см. README).';
+        exec sleep infinity;
+      fi &&
+      dpkg --add-architecture i386 &&
+      apt-get update &&
+      apt-get install -y libc6:i386 libstdc++6:i386 &&
+      chmod +x /server/samp03svr &&
+      exec /server/samp03svr
+      "
+    ports:
+      - "7777:7777/tcp"
+      - "7777:7777/udp"
+
+  web-panel:
+    image: dmytrosmexoff/samp-console-web:latest
+    container_name: homelab-samp-console_web-panel_1
+    restart: unless-stopped
+    environment:
+      - RCON_HOST=homelab-samp-console_samp-server_1
+      - RCON_PORT=7777
+      - DOCKER_TARGET=homelab-samp-console_samp-server_1
+    volumes:
+      - ${APP_DATA_DIR}/server:/serverdata:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - samp-server
