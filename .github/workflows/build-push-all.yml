@@ -1,0 +1,146 @@
+name: Build and Push All Apps
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'homelab-tiktok-dloader/**'
+      - 'homelab-tt-dloader/**'
+      - 'homelab-samp-console/**'
+      - 'homelab-flip-uptime/**'
+      - 'homelab-url-short/**'
+      - '.github/workflows/build-push-all.yml'
+  workflow_dispatch: {}
+
+jobs:
+  tiktok-dloader:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./homelab-tiktok-dloader
+          file: ./homelab-tiktok-dloader/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tiktok-bot:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/tiktok-bot:${{ github.sha }}
+          cache-from: type=gha,scope=tiktok-dloader
+          cache-to: type=gha,mode=max,scope=tiktok-dloader
+
+  tt-dloader:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./homelab-tt-dloader
+          file: ./homelab-tt-dloader/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tt-dloader:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/tt-dloader:${{ github.sha }}
+          cache-from: type=gha,scope=tt-dloader
+          cache-to: type=gha,mode=max,scope=tt-dloader
+
+  samp-console-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./homelab-samp-console/web
+          file: ./homelab-samp-console/web/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/samp-console-web:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/samp-console-web:${{ github.sha }}
+          cache-from: type=gha,scope=samp-web
+          cache-to: type=gha,mode=max,scope=samp-web
+
+  samp-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # только amd64 — samp03svr это 32-битный x86-бинарник
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./homelab-samp-console/server
+          file: ./homelab-samp-console/server/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/samp-server:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/samp-server:${{ github.sha }}
+          cache-from: type=gha,scope=samp-server
+          cache-to: type=gha,mode=max,scope=samp-server
+
+  flip-uptime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./homelab-flip-uptime/app
+          file: ./homelab-flip-uptime/app/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/flip-uptime:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/flip-uptime:${{ github.sha }}
+          cache-from: type=gha,scope=flip-uptime
+          cache-to: type=gha,mode=max,scope=flip-uptime
+
+  url-short:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./homelab-url-short/app
+          file: ./homelab-url-short/app/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/url-short:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/url-short:${{ github.sha }}
+          cache-from: type=gha,scope=url-short
+          cache-to: type=gha,mode=max,scope=url-short
