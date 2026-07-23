@@ -1,11 +1,11 @@
-name: Build and Push Flip Uptime
+name: Build and Push URL Short
 
 on:
   push:
     branches: [ main ]
     paths:
-      - 'homelab-flip-uptime/**'
-      - '.github/workflows/build-push-flip-uptime.yml'
+      - 'homelab-url-short/**'
+      - '.github/workflows/build-push-url-short.yml'
   workflow_dispatch: {}
 
 jobs:
@@ -30,12 +30,12 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
-          context: ./homelab-flip-uptime/app
-          file: ./homelab-flip-uptime/app/Dockerfile
+          context: ./homelab-url-short/app
+          file: ./homelab-url-short/app/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/flip-uptime:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/flip-uptime:${{ github.sha }}
-          cache-from: type=gha,scope=flip-uptime
-          cache-to: type=gha,mode=max,scope=flip-uptime
+            ${{ secrets.DOCKERHUB_USERNAME }}/url-short:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/url-short:${{ github.sha }}
+          cache-from: type=gha,scope=url-short
+          cache-to: type=gha,mode=max,scope=url-short
